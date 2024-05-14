@@ -41,6 +41,8 @@ struct Node {
     int children_length;
 };
 
+void cleanup_node(struct Node node);
+
 // Expression Parsers
 struct Node parse_expression(struct Token *tokens, int num_tokens, int *token_pos);
 struct Node parse_number_or_variable(struct Token *tokens, int num_tokens, int *token_pos);

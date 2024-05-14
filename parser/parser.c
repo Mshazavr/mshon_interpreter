@@ -36,6 +36,24 @@ void print_node(struct Node *node, int indent_count) {
         printf("Node value: %s\n", node->value);
     }
 
+    if (node->operators) {
+        print_indent(indent_count);
+        printf("Node operators: [");
+        for (int i = 0; i < node->children_length - 1; ++i) {
+            printf("%d, ", node->operators[i]);
+        }
+        printf("]\n");
+    }
+    
+    if (node->args) {
+        print_indent(indent_count);
+        printf("Node args: [");
+        for (int i = 0; i < node->args_length; ++i) {
+            printf("%s, ", node->args[i]);
+        }
+        printf("]\n");
+    }
+
     if (node->children) {
         for (int i = 0; i < node->children_length; ++i) {
             print_node(node->children+i, indent_count + 4);
@@ -46,6 +64,10 @@ void print_node(struct Node *node, int indent_count) {
             }
         }
     }
+}
+
+void cleanup_node(struct Node node) {
+    return;
 }
 
 void cleanup_double_array(char **args, int args_length) {
@@ -294,7 +316,7 @@ struct Node parse_if_else_stmt(struct Token *tokens, int num_tokens, int *token_
     if (
         num_tokens - *token_pos < 2 || 
         tokens[*token_pos].token_type != IF ||
-        tokens[*token_pos].token_type != ROUND_OPEN
+        tokens[*token_pos+1].token_type != ROUND_OPEN
     ) return INVALID_NODE;
 
     *token_pos += 2; // skipping IF ROUND_OPEN 
@@ -304,7 +326,7 @@ struct Node parse_if_else_stmt(struct Token *tokens, int num_tokens, int *token_
     if (
         num_tokens - *token_pos < 2 || 
         tokens[*token_pos].token_type != ROUND_CLOSE ||
-        tokens[*token_pos].token_type != CURLY_OPEN
+        tokens[*token_pos+1].token_type != CURLY_OPEN
     ) return INVALID_NODE; 
 
     *token_pos += 2; // skipping ROUND_CLOSE CURLY_OPEN 
@@ -352,7 +374,7 @@ struct Node parse_if_else_stmt(struct Token *tokens, int num_tokens, int *token_
 
         struct Node node = {
             .node_type = IF_ELSE_STMT,
-            .children_length = 3,
+            .children_length = 2,
             .children = children
         };
 
@@ -376,27 +398,38 @@ struct Node parse_function(struct Token *tokens, int num_tokens, int *token_pos)
 
     // parse the arguments 
     *token_pos += 3; // skipping FN IDENTIFIER ROUND_OPEN
+    if (*token_pos >= num_tokens) return INVALID_NODE;
     char **args = malloc(10 * sizeof(void*));
     int args_length = 0;
     int args_capacity = 10;
-    while(1) {
-        if (*token_pos >= num_tokens || tokens[*token_pos].token_type == ROUND_CLOSE) break;
-        
-        struct Node next_node = parse_number_or_variable(tokens, num_tokens, token_pos);
-        
-        if (next_node.node_type != VARIABLE) {
-            cleanup_double_array(args, args_length);
-            return INVALID_NODE;
-        }
-
-        if (args_length == args_capacity) {
-            args_capacity *= 2;
-            args = realloc(args, args_capacity * sizeof(void*));
-        }
-
-        args[args_length++] = next_node.value; // ownership transfer
+    if (tokens[*token_pos].token_type == ROUND_CLOSE) {
+        *token_pos += 1;
     }
-    *token_pos += 1; // skipping ROUND_CLOSE
+    else {
+        while(1) {  
+            struct Node next_node = parse_number_or_variable(tokens, num_tokens, token_pos);
+            
+            if (next_node.node_type != VARIABLE) {
+                cleanup_double_array(args, args_length);
+                return INVALID_NODE;
+            }
+            
+            if (args_length == args_capacity) {
+                args_capacity *= 2;
+                args = realloc(args, args_capacity * sizeof(void*));
+            }
+            args[args_length++] = next_node.value; // ownership transfer
+            
+            if (*token_pos < num_tokens && tokens[*token_pos].token_type == COMMA) { // TODO peek function
+                *token_pos += 1; 
+            }
+            else if (*token_pos < num_tokens && tokens[*token_pos].token_type == ROUND_CLOSE) {
+                *token_pos += 1;
+                break;
+            }
+            else return INVALID_NODE;
+        }
+    }
 
     if(*token_pos == num_tokens || tokens[*token_pos].token_type != CURLY_OPEN) {
         cleanup_double_array(args, args_length);
@@ -451,14 +484,16 @@ struct Node parse_stmt_sequence(struct Token *tokens, int num_tokens, int *token
         else if (tokens[*token_pos].token_type == IF) next_node = parse_if_else_stmt(tokens, num_tokens, token_pos);
         else if (tokens[*token_pos].token_type == FN) next_node = parse_function(tokens, num_tokens, token_pos);
         else break; 
-
-        if (next_node.node_type == INVALID) return INVALID_NODE;
+        
+        if (next_node.node_type == INVALID) {
+            return INVALID_NODE;
+        }
 
         if (children_length == children_capacity) {
             children_capacity *= 2;
             children = realloc(children, children_capacity * sizeof(struct Node));
         }
-        children[children_capacity++] = next_node;
+        children[children_length++] = next_node;
     }
 
     struct Node node = {
@@ -474,8 +509,15 @@ struct Node parse_stmt_sequence(struct Token *tokens, int num_tokens, int *token
 struct Node parse_ast(struct Token *tokens, int num_tokens) {
     int *token_pos = malloc(sizeof(int));
     *token_pos = 0;
-    struct Node result = parse_expression(tokens, num_tokens, token_pos);
+    struct Node result = parse_stmt_sequence(tokens, num_tokens, token_pos);\
+    
+    if (*token_pos != num_tokens) {
+        cleanup_node(result);
+        result = INVALID_NODE;
+    }
+
     free(token_pos);
+    
     return result;
 }
 
@@ -502,3 +544,17 @@ char ast_equal(struct Node *left, struct Node *right) {
     
     return 1;
 }
+
+
+/*
+TODOs 
+- add step function for stepping over single char and return 1 or 0 status code 
+- make a struct for storing parser context (tokens, num_tokens, token_pos)
+- support for empty function and if-else bodies, and empty programs
+- implement cleanup_node
+- description syntax errors attached to invalid nodes
+- remove brackets from if else 
+- add back tokentype names for logging
+- add peek function (similar to step function)
+- a proper TestCase struct for parser and tokenizer test cases
+*/
