@@ -5,12 +5,20 @@
 #include <stdio.h>
 
 
+// Used for logging
 char *NodeTypeNames[] = {
     "NUMBER",
     "VARIABLE",
     "ARITHMETIC",
     "EQUALITY",
-    "INVALID"
+    "INVALID",
+    "IF_ELSE_STMT",
+    "FUNCTION",
+    "DECLARATION",
+    "ASSIGNMENT",
+    "RETURN_STMT",
+    "PRINT_STMT",
+    "STMT_SEQUENCE",
 };
 
 struct Node INVALID_NODE = { .node_type = INVALID };
@@ -40,8 +48,12 @@ void print_node(struct Node *node, int indent_count) {
     }
 }
 
+void cleanup_double_array(char **args, int args_length) {
+    for (int i = 0; i < args_length; ++i) free(args[i]);
+    free(args);
+}
 
-// Parsing functions / FSM nodes 
+// Expression Parsers 
 struct Node parse_number_or_variable(struct Token *tokens, int num_tokens, int *token_pos) {
     struct Node node = { .node_type = 0 };
     if (
@@ -152,6 +164,313 @@ struct Node parse_expression(struct Token *tokens, int num_tokens, int *token_po
     }
 }
 
+// Statement Parsers
+struct Node parse_declaration(struct Token *tokens, int num_tokens, int *token_pos) {
+    // LET IDENTIFER EQUAL <statement> SEMICOLON 
+    
+    if (num_tokens - *token_pos < 3) return INVALID_NODE;
+    if (
+        tokens[*token_pos].token_type != LET || 
+        tokens[*token_pos+1].token_type != IDENTIFIER ||
+        tokens[*token_pos+2].token_type != EQUAL
+    ) return INVALID_NODE;
+
+    *token_pos += 1; // skipping LET
+    struct Node first_child = parse_number_or_variable(tokens, num_tokens, token_pos);
+    
+    *token_pos += 1; // skipping EQUAL
+    struct Node second_child = parse_expression(tokens, num_tokens, token_pos);
+
+    if (first_child.node_type == INVALID ||  second_child.node_type == INVALID) {
+        return INVALID_NODE;
+    }
+
+    if (*token_pos >= num_tokens || tokens[*token_pos].token_type != SEMICOLON) {
+        return INVALID_NODE;
+    }
+
+    *token_pos += 1; // skipping SEMICOLON
+    struct Node *children = malloc(2 * sizeof(struct Node));
+    children[0] = first_child;
+    children[1] = second_child;
+    struct Node node = {
+        .node_type = DECLARATION,
+        .children_length = 2,
+        .children = children
+    };
+    return node;
+}
+
+
+struct Node parse_assignment(struct Token *tokens, int num_tokens, int *token_pos) {
+    // IDENTIFER EQUAL <statement> SEMICOLON 
+    
+    if (num_tokens - *token_pos < 2) return INVALID_NODE;
+    if (
+        tokens[*token_pos].token_type != IDENTIFIER ||
+        tokens[*token_pos+1].token_type != EQUAL
+    ) return INVALID_NODE;
+
+    struct Node first_child = parse_number_or_variable(tokens, num_tokens, token_pos);
+    
+    *token_pos += 1; // skipping EQUAL
+    struct Node second_child = parse_expression(tokens, num_tokens, token_pos);
+
+    if (first_child.node_type == INVALID ||  second_child.node_type == INVALID) {
+        return INVALID_NODE;
+    }
+
+    if (*token_pos >= num_tokens || tokens[*token_pos].token_type != SEMICOLON) {
+        return INVALID_NODE;
+    }
+
+    *token_pos += 1; // skipping SEMICOLON
+    struct Node *children = malloc(2 * sizeof(struct Node));
+    children[0] = first_child;
+    children[1] = second_child;
+    struct Node node = {
+        .node_type = ASSIGNMENT,
+        .children_length = 2,
+        .children = children
+    };
+    return node;
+}
+
+
+struct Node parse_return_stmt(struct Token *tokens, int num_tokens, int *token_pos) {
+    // RETURN <expression> ;
+    if (*token_pos >= num_tokens || tokens[*token_pos].token_type != RETURN) {
+        return INVALID_NODE;
+    }
+
+    *token_pos += 1; // skipping RETURN 
+    struct Node child = parse_expression(tokens, num_tokens, token_pos);
+
+    if (*token_pos >= num_tokens || tokens[*token_pos].token_type != SEMICOLON) {
+        return INVALID_NODE;
+    }
+
+    *token_pos += 1; // skipping SEMICOLON
+    struct Node *children = malloc(sizeof(struct Node));
+    children[0] = child;
+    struct Node node = {
+        .node_type = RETURN_STMT,
+        .children_length = 1,
+        .children = children
+    };
+    return node;
+}
+
+
+struct Node parse_print_stmt(struct Token *tokens, int num_tokens, int *token_pos) {
+    // PRINT <expression> ;
+    if (*token_pos >= num_tokens || tokens[*token_pos].token_type != PRINT) {
+        return INVALID_NODE;
+    }
+
+    *token_pos += 1; // skipping RETURN 
+    struct Node child = parse_expression(tokens, num_tokens, token_pos);
+    
+    if (*token_pos >= num_tokens || tokens[*token_pos].token_type != SEMICOLON) {
+        return INVALID_NODE;
+    }
+
+    *token_pos += 1; // skipping SEMICOLON
+    struct Node *children = malloc(sizeof(struct Node));
+    children[0] = child;
+    struct Node node = {
+        .node_type = PRINT_STMT,
+        .children_length = 1,
+        .children = children
+    };
+    return node;
+}
+
+
+struct Node parse_if_else_stmt(struct Token *tokens, int num_tokens, int *token_pos) {
+    // IF ROUND_OPEN <expression> ROUND_CLOSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE
+    // ELSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE <---- this line is optional 
+
+    if (
+        num_tokens - *token_pos < 2 || 
+        tokens[*token_pos].token_type != IF ||
+        tokens[*token_pos].token_type != ROUND_OPEN
+    ) return INVALID_NODE;
+
+    *token_pos += 2; // skipping IF ROUND_OPEN 
+    struct Node first_child = parse_expression(tokens, num_tokens, token_pos);
+    if (first_child.node_type == INVALID) return INVALID_NODE;
+
+    if (
+        num_tokens - *token_pos < 2 || 
+        tokens[*token_pos].token_type != ROUND_CLOSE ||
+        tokens[*token_pos].token_type != CURLY_OPEN
+    ) return INVALID_NODE; 
+
+    *token_pos += 2; // skipping ROUND_CLOSE CURLY_OPEN 
+    struct Node second_child = parse_stmt_sequence(tokens, num_tokens, token_pos);
+    if (second_child.node_type == INVALID) return INVALID_NODE;
+
+    if (*token_pos >= num_tokens || tokens[*token_pos].token_type != CURLY_CLOSE) {
+        return INVALID_NODE;
+    }
+    *token_pos += 1; // skipping CURLY_CLOSE 
+
+    // Parse the ELSE block 
+    if (*token_pos < num_tokens && tokens[*token_pos].token_type == ELSE) {
+        *token_pos += 1; // skipping ELSE
+        if (*token_pos >= num_tokens || tokens[*token_pos].token_type != CURLY_OPEN) {
+            return INVALID_NODE;
+        }
+
+        *token_pos += 1; // skipping CURLY_OPEN 
+        struct Node third_child = parse_stmt_sequence(tokens, num_tokens, token_pos);
+        if (third_child.node_type == INVALID) return INVALID_NODE;
+        
+        if (*token_pos >= num_tokens || tokens[*token_pos].token_type != CURLY_CLOSE) {
+            return INVALID_NODE;
+        }
+        *token_pos += 1; // skipping CURLY_CLOSE 
+
+        struct Node *children = malloc(3 * sizeof(struct Node));
+        children[0] = first_child;
+        children[1] = second_child;
+        children[2] = third_child;
+
+        struct Node node = {
+            .node_type = IF_ELSE_STMT,
+            .children_length = 3,
+            .children = children
+        };
+
+        return node;
+    }
+    else {
+        struct Node *children = malloc(2 * sizeof(struct Node));
+        children[0] = first_child;
+        children[1] = second_child;
+
+        struct Node node = {
+            .node_type = IF_ELSE_STMT,
+            .children_length = 3,
+            .children = children
+        };
+
+        return node;
+    }
+}
+
+
+struct Node parse_function(struct Token *tokens, int num_tokens, int *token_pos) {
+    // FN IDENTIFIER ROUND_OPEN <comma _separated identifiers> ROUND_CLOSE
+    // CURLY_OPEN <stmt_sequence> CURLY_CLOSE 
+
+    if (
+        num_tokens - *token_pos < 3 || 
+        tokens[*token_pos].token_type != FN || 
+        tokens[*token_pos+1].token_type != IDENTIFIER || 
+        tokens[*token_pos+2].token_type != ROUND_OPEN 
+    ) return INVALID_NODE;
+
+    int function_name_token_pos = *token_pos+1;
+
+    // parse the arguments 
+    *token_pos += 3; // skipping FN IDENTIFIER ROUND_OPEN
+    char **args = malloc(10 * sizeof(void*));
+    int args_length = 0;
+    int args_capacity = 10;
+    while(1) {
+        if (*token_pos >= num_tokens || tokens[*token_pos].token_type == ROUND_CLOSE) break;
+        
+        struct Node next_node = parse_number_or_variable(tokens, num_tokens, token_pos);
+        
+        if (next_node.node_type != VARIABLE) {
+            cleanup_double_array(args, args_length);
+            return INVALID_NODE;
+        }
+
+        if (args_length == args_capacity) {
+            args_capacity *= 2;
+            args = realloc(args, args_capacity * sizeof(void*));
+        }
+
+        args[args_length++] = next_node.value; // ownership transfer
+    }
+    *token_pos += 1; // skipping ROUND_CLOSE
+
+    if(*token_pos == num_tokens || tokens[*token_pos].token_type != CURLY_OPEN) {
+        cleanup_double_array(args, args_length);
+        return INVALID_NODE;
+    }
+    *token_pos += 1; // skipping CURLY_OPEN
+
+    struct Node child_node = parse_stmt_sequence(tokens, num_tokens, token_pos);
+    if (child_node.node_type == INVALID) {
+        cleanup_double_array(args, args_length);
+        return INVALID_NODE;
+    }
+
+    //if(!advance(tokens, num_tokens, token_pos, (struct Token[]){})) TODO 
+    if(*token_pos == num_tokens || tokens[*token_pos].token_type != CURLY_CLOSE) {
+        cleanup_double_array(args, args_length);
+        return INVALID_NODE;
+    }
+    *token_pos += 1; // skipping CURLY_CLOSE 
+
+    struct Node *children = malloc(sizeof(struct Node));
+    children[0] = child_node; 
+    
+    char *value = malloc(strlen(tokens[function_name_token_pos].token_value)+1);
+    value = strcpy(value, tokens[function_name_token_pos].token_value);
+
+    struct Node node = {
+        .node_type = FUNCTION,
+        .value = value,
+        .args = args,
+        .args_length = args_length,
+        .children = children, 
+        .children_length = 1 
+    };
+    return node;
+}
+
+
+struct Node parse_stmt_sequence(struct Token *tokens, int num_tokens, int *token_pos) {
+    struct Node *children = malloc(10 * sizeof(struct Node));
+    int children_length = 0;
+    int children_capacity = 10;
+
+    while(1) {
+        struct Node next_node;
+
+        if (*token_pos >= num_tokens) break;
+        if (tokens[*token_pos].token_type == LET) next_node = parse_declaration(tokens, num_tokens, token_pos);
+        else if (tokens[*token_pos].token_type == IDENTIFIER) next_node = parse_assignment(tokens, num_tokens, token_pos);
+        else if (tokens[*token_pos].token_type == RETURN) next_node = parse_return_stmt(tokens, num_tokens, token_pos);
+        else if (tokens[*token_pos].token_type == PRINT) next_node = parse_print_stmt(tokens, num_tokens, token_pos);
+        else if (tokens[*token_pos].token_type == IF) next_node = parse_if_else_stmt(tokens, num_tokens, token_pos);
+        else if (tokens[*token_pos].token_type == FN) next_node = parse_function(tokens, num_tokens, token_pos);
+        else break; 
+
+        if (next_node.node_type == INVALID) return INVALID_NODE;
+
+        if (children_length == children_capacity) {
+            children_capacity *= 2;
+            children = realloc(children, children_capacity * sizeof(struct Node));
+        }
+        children[children_capacity++] = next_node;
+    }
+
+    struct Node node = {
+        .node_type = STMT_SEQUENCE,
+        .children_length = children_length, 
+        .children = realloc(children, children_capacity * sizeof(struct Node))
+    };
+
+    return node;
+}
+
+// Entry points
 struct Node parse_ast(struct Token *tokens, int num_tokens) {
     int *token_pos = malloc(sizeof(int));
     *token_pos = 0;

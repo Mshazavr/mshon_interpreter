@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra -g -Wno-missing-field-initializers
 
 OBJ = main.o tokenizer/tokenizer.o parser/parser.o
 

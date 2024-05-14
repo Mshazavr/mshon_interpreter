@@ -7,39 +7,14 @@
 void test_tokenizer() {
     char *code = "let xd = 12; let y = 14; fn main() {if (xd == y - 2) {print(xd + y);}}";
     struct Token expected_tokens[] = {
-        {LET, NULL},
-        {IDENTIFIER, "xd"},
-        {EQUAL, NULL},
-        {NUMERIC_LITERAL, "12"},
-        {SEMICOLON, NULL},
-        {LET, NULL},
-        {IDENTIFIER, "y"},
-        {EQUAL, NULL},
-        {NUMERIC_LITERAL, "14"},
-        {SEMICOLON, NULL},
-        {FN, NULL},
-        {IDENTIFIER, "main"},
-        {ROUND_OPEN, NULL},
-        {ROUND_CLOSE, NULL},
-        {CURLY_OPEN, NULL},
-        {IF, NULL},
-        {ROUND_OPEN, NULL},
-        {IDENTIFIER, "xd"},
-        {DOUBLE_EQUAL, NULL},
-        {IDENTIFIER, "y"},
-        {MINUS, NULL},
-        {NUMERIC_LITERAL, "2"},
-        {ROUND_CLOSE, NULL},
-        {CURLY_OPEN, NULL},
-        {PRINT, NULL},
-        {ROUND_OPEN, NULL},
-        {IDENTIFIER, "xd"},
-        {PLUS, NULL},
-        {IDENTIFIER, "y"},
-        {ROUND_CLOSE, NULL},
-        {SEMICOLON, NULL},
-        {CURLY_CLOSE, NULL},
-        {CURLY_CLOSE, NULL}
+        {LET}, {IDENTIFIER, "xd"}, {EQUAL}, {NUMERIC_LITERAL, "12"}, {SEMICOLON},
+        {LET}, {IDENTIFIER, "y"}, {EQUAL}, {NUMERIC_LITERAL, "14"}, {SEMICOLON},
+        {FN}, {IDENTIFIER, "main"}, {ROUND_OPEN}, {ROUND_CLOSE}, {CURLY_OPEN},
+            {IF}, {ROUND_OPEN}, {IDENTIFIER, "xd"}, {DOUBLE_EQUAL}, {IDENTIFIER, "y"}, {MINUS}, {NUMERIC_LITERAL, "2"}, {ROUND_CLOSE},
+            {CURLY_OPEN},
+                {PRINT}, {ROUND_OPEN}, {IDENTIFIER, "xd"}, {PLUS}, {IDENTIFIER, "y"}, {ROUND_CLOSE},{SEMICOLON},
+            {CURLY_CLOSE},
+        {CURLY_CLOSE}
     };
     struct TokenizerState tokenizer_state = init_tokenizer_state(code);
     tokenize(&tokenizer_state);
