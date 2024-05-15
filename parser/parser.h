@@ -41,21 +41,26 @@ struct Node {
     int children_length;
 };
 
-void cleanup_node(struct Node node);
+struct ParserContext {
+    struct Token *tokens; 
+    int num_tokens;
+    int token_pos;  
+};
+
 
 // Expression Parsers
-struct Node parse_expression(struct Token *tokens, int num_tokens, int *token_pos);
-struct Node parse_number_or_variable(struct Token *tokens, int num_tokens, int *token_pos);
-struct Node parse_bracket_expression(struct Token *tokens, int num_tokens, int *token_pos);
+struct Node parse_expression(struct ParserContext *context);
+struct Node parse_number_or_variable(struct ParserContext *context);
+struct Node parse_bracket_expression(struct ParserContext *context);
 
 // Statement Parsers
-struct Node parse_declaration(struct Token *tokens, int num_tokens, int *token_pos);
-struct Node parse_assignment(struct Token *tokens, int num_tokens, int *token_pos);
-struct Node parse_return_stmt(struct Token *tokens, int num_tokens, int *token_pos);
-struct Node parse_print_stmt(struct Token *tokens, int num_tokens, int *token_pos);
-struct Node parse_if_else_stmt(struct Token *tokens, int num_tokens, int *token_pos);
-struct Node parse_function(struct Token *tokens, int num_tokens, int *token_pos);
-struct Node parse_stmt_sequence(struct Token *tokens, int num_tokens, int *token_pos);
+struct Node parse_declaration(struct ParserContext *context);
+struct Node parse_assignment(struct ParserContext *context);
+struct Node parse_return_stmt(struct ParserContext *context);
+struct Node parse_print_stmt(struct ParserContext *context);
+struct Node parse_if_else_stmt(struct ParserContext *context);
+struct Node parse_function(struct ParserContext *context);
+struct Node parse_stmt_sequence(struct ParserContext *context);
 
 // Entry points
 struct Node parse_ast(struct Token *tokens, int num_tokens);
