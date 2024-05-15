@@ -378,24 +378,24 @@ struct Node parse_print_stmt(struct ParserContext *context) {
 
 
 struct Node parse_if_else_stmt(struct ParserContext *context) {
-    // IF ROUND_OPEN <expression> ROUND_CLOSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE
+    // IF <expression> CURLY_OPEN <stmt_sequence> CURLY_CLOSE
     // ELSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE <---- this line is optional 
 
-    // IF ROUND_OPEN
-    if (!step(context, IF) || !step(context, ROUND_OPEN)) return INVALID_NODE;
+    // IF
+    if (!step(context, IF)) return INVALID_NODE;
 
-    // IF ROUND_OPEN <expression>
+    // IF <expression>
     struct Node first_child = parse_expression(context);
     if (first_child.node_type == INVALID) return INVALID_NODE;
 
-    // IF ROUND_OPEN <expression> ROUND_CLOSE CURLY_OPEN
-    if (!step(context, ROUND_CLOSE) || !step(context, CURLY_OPEN)) return INVALID_NODE;
+    // IF <expression> CURLY_OPEN
+    if (!step(context, CURLY_OPEN)) return INVALID_NODE;
 
-    // IF ROUND_OPEN <expression> ROUND_CLOSE CURLY_OPEN <stmt_sequence>
+    // IF <expression> CURLY_OPEN <stmt_sequence>
     struct Node second_child = parse_stmt_sequence(context);
     if (second_child.node_type == INVALID) return INVALID_NODE;
 
-    // IF ROUND_OPEN <expression> ROUND_CLOSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE
+    // IF <expression> CURLY_OPEN <stmt_sequence> CURLY_CLOSE
     if (!step(context, CURLY_CLOSE)) return INVALID_NODE;
 
     // Parse the ELSE block 
@@ -593,9 +593,6 @@ char ast_equal(struct Node *left, struct Node *right) {
 
 /*
 TODOs 
-- support for function call expressions
-- support for empty function and if-else bodies, and empty programs
 - descriptive syntax errors attached to invalid nodes
-- remove brackets from if else 
 - a proper TestCase struct for parser and tokenizer test cases
 */
