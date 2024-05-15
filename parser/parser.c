@@ -76,17 +76,28 @@ void cleanup_double_array(char **args, int args_length) {
 }
 
 // Expression Parsers 
+char peek(struct ParserContext *context, enum TokenType token_type) {
+    if (context->token_pos >= context->num_tokens) return 0;
+    return context->tokens[context->token_pos].token_type == token_type;
+}
+
+char step(struct ParserContext *context, enum TokenType token_type) {
+    if (context->token_pos >= context->num_tokens) return 0;
+    if (context->tokens[context->token_pos].token_type == token_type) {
+        context->token_pos += 1;
+        return 1;
+    }
+    return 0;
+}
+
 struct Node parse_number_or_variable(struct ParserContext *context) {
     struct Node node = { .node_type = 0 };
-    if (
-        context->token_pos >= context->num_tokens || 
-        (
-            context->tokens[context->token_pos].token_type != NUMERIC_LITERAL && 
-            context->tokens[context->token_pos].token_type != IDENTIFIER
-        )
-    ) return INVALID_NODE;
-    if (context->tokens[context->token_pos].token_type == NUMERIC_LITERAL) node.node_type = NUMBER;
-    if (context->tokens[context->token_pos].token_type == IDENTIFIER) node.node_type = VARIABLE;
+    if (!peek(context, NUMERIC_LITERAL) && !peek(context, IDENTIFIER)) {
+        return INVALID_NODE;
+    }
+    if (peek(context, NUMERIC_LITERAL)) node.node_type = NUMBER;
+    if (peek(context, IDENTIFIER)) node.node_type = VARIABLE;
+
     node.value = malloc(strlen(context->tokens[context->token_pos].token_value) + 1);
     strcpy(node.value, context->tokens[context->token_pos].token_value);
 
@@ -95,18 +106,9 @@ struct Node parse_number_or_variable(struct ParserContext *context) {
 }
 
 struct Node parse_bracket_expression(struct ParserContext *context) {
-    if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != ROUND_OPEN) {
-        return INVALID_NODE;
-    }
-    context->token_pos += 1;
-    
+    if (!step(context, ROUND_OPEN)) return INVALID_NODE;
     struct Node child_node = parse_expression(context);
-    
-    if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != ROUND_CLOSE) {
-        return INVALID_NODE;
-    }
-    context->token_pos += 1;
-
+    if (!step(context, ROUND_CLOSE)) return INVALID_NODE;
     return child_node;
 }
 
@@ -126,13 +128,8 @@ struct Node parse_expression(struct ParserContext *context) {
         
         // Parse the next operand
         struct Node next_node;
-        if (context->tokens[context->token_pos].token_type == ROUND_OPEN) {
-            next_node = parse_bracket_expression(context);
-        }
-        else if (
-            context->tokens[context->token_pos].token_type == NUMERIC_LITERAL || 
-            context->tokens[context->token_pos].token_type == IDENTIFIER
-        ) {
+        if (peek(context, ROUND_OPEN)) next_node = parse_bracket_expression(context);
+        else if (peek(context, NUMERIC_LITERAL) || peek(context, IDENTIFIER)) {
             next_node = parse_number_or_variable(context);
         }
         else break;
@@ -148,12 +145,7 @@ struct Node parse_expression(struct ParserContext *context) {
 
 
         // Parse the next operator and add it to the operator buffer
-        if (
-            context->tokens[context->token_pos].token_type == PLUS ||
-            context->tokens[context->token_pos].token_type == MINUS ||
-            context->tokens[context->token_pos].token_type == MULT ||
-            context->tokens[context->token_pos].token_type == DIV
-        ) {
+        if (peek(context, PLUS) || peek(context, MINUS) || peek(context, MULT) || peek(context, DIV)) {
             if (operators_capacity == operators_length) {
                 operators_capacity *= 2;
                 operators_buffer = realloc(operators_buffer, operators_capacity * sizeof(enum TokenType));
@@ -188,30 +180,26 @@ struct Node parse_expression(struct ParserContext *context) {
 
 // Statement Parsers
 struct Node parse_declaration(struct ParserContext *context) {
-    // LET IDENTIFER EQUAL <statement> SEMICOLON 
-    
-    if (context->num_tokens - context->token_pos < 3) return INVALID_NODE;
-    if (
-        context->tokens[context->token_pos].token_type != LET || 
-        context->tokens[context->token_pos+1].token_type != IDENTIFIER ||
-        context->tokens[context->token_pos+2].token_type != EQUAL
-    ) return INVALID_NODE;
+    // LET IDENTIFER EQUAL <expression> SEMICOLON 
 
-    context->token_pos += 1; // skipping LET
+    // LET
+    if (!step(context, LET)) return INVALID_NODE;
+    
+    // LET IDENTIFIER
+    if (!peek(context, IDENTIFIER)) return INVALID_NODE;
     struct Node first_child = parse_number_or_variable(context);
+    if (first_child.node_type == INVALID) return INVALID_NODE;
     
-    context->token_pos += 1; // skipping EQUAL
+    // LET IDENTIFIER EQUAL
+    if (!step(context, EQUAL)) return INVALID_NODE;
+
+    // LET IDENTIFIER EQUAL <expression>
     struct Node second_child = parse_expression(context);
+    if (second_child.node_type == INVALID) return INVALID_NODE;
 
-    if (first_child.node_type == INVALID ||  second_child.node_type == INVALID) {
-        return INVALID_NODE;
-    }
+    // LET IDENTIFIER EQUAL <expression> SEMICOLON
+    if (!step(context, SEMICOLON)) return INVALID_NODE;
 
-    if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != SEMICOLON) {
-        return INVALID_NODE;
-    }
-
-    context->token_pos += 1; // skipping SEMICOLON
     struct Node *children = malloc(2 * sizeof(struct Node));
     children[0] = first_child;
     children[1] = second_child;
@@ -225,28 +213,23 @@ struct Node parse_declaration(struct ParserContext *context) {
 
 
 struct Node parse_assignment(struct ParserContext *context) {
-    // IDENTIFER EQUAL <statement> SEMICOLON 
+    // IDENTIFIER EQUAL <expression> SEMICOLON
     
-    if (context->num_tokens - context->token_pos < 2) return INVALID_NODE;
-    if (
-        context->tokens[context->token_pos].token_type != IDENTIFIER ||
-        context->tokens[context->token_pos+1].token_type != EQUAL
-    ) return INVALID_NODE;
-
+    // IDENTIFIER
+    if (!peek(context, IDENTIFIER)) return INVALID_NODE;
     struct Node first_child = parse_number_or_variable(context);
-    
-    context->token_pos += 1; // skipping EQUAL
+    if (first_child.node_type == INVALID) return INVALID_NODE; 
+
+    // IDENTIFIER EQUAL
+    if (!step(context, EQUAL)) return INVALID_NODE;
+
+    // IDENTIFIER EQUAL <expression>
     struct Node second_child = parse_expression(context);
+    if (second_child.node_type == INVALID) return INVALID_NODE;
 
-    if (first_child.node_type == INVALID ||  second_child.node_type == INVALID) {
-        return INVALID_NODE;
-    }
+    // IDENTIFIER EQUAL <expression> SEMICOLON
+    if (!step(context, SEMICOLON)) return INVALID_NODE;
 
-    if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != SEMICOLON) {
-        return INVALID_NODE;
-    }
-
-    context->token_pos += 1; // skipping SEMICOLON
     struct Node *children = malloc(2 * sizeof(struct Node));
     children[0] = first_child;
     children[1] = second_child;
@@ -260,19 +243,18 @@ struct Node parse_assignment(struct ParserContext *context) {
 
 
 struct Node parse_return_stmt(struct ParserContext *context) {
-    // RETURN <expression> ;
-    if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != RETURN) {
-        return INVALID_NODE;
-    }
+    // RETURN <expression> SEMICOLON
 
-    context->token_pos += 1; // skipping RETURN 
+    // RETURN
+    if (!step(context, RETURN)) return INVALID_NODE;
+
+    // RETURN <expression>
     struct Node child = parse_expression(context);
+    if (child.node_type == INVALID) return INVALID_NODE;
 
-    if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != SEMICOLON) {
-        return INVALID_NODE;
-    }
+    // RETURN <expression> SEMICOlON
+    if (!step(context, SEMICOLON)) return INVALID_NODE;
 
-    context->token_pos += 1; // skipping SEMICOLON
     struct Node *children = malloc(sizeof(struct Node));
     children[0] = child;
     struct Node node = {
@@ -285,19 +267,18 @@ struct Node parse_return_stmt(struct ParserContext *context) {
 
 
 struct Node parse_print_stmt(struct ParserContext *context) {
-    // PRINT <expression> ;
-    if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != PRINT) {
-        return INVALID_NODE;
-    }
+    // PRINT <expression> SEMICOLON
 
-    context->token_pos += 1; // skipping PRINT 
+    // PRINT
+    if (!step(context, PRINT)) return INVALID_NODE;
+
+    // PRINT <expression>
     struct Node child = parse_expression(context);
-    
-    if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != SEMICOLON) {
-        return INVALID_NODE;
-    }
+    if (child.node_type == INVALID) return INVALID_NODE;
 
-    context->token_pos += 1; // skipping SEMICOLON
+    // PRINT <expression> SEMICOlON
+    if (!step(context, SEMICOLON)) return INVALID_NODE;
+
     struct Node *children = malloc(sizeof(struct Node));
     children[0] = child;
     struct Node node = {
@@ -313,46 +294,37 @@ struct Node parse_if_else_stmt(struct ParserContext *context) {
     // IF ROUND_OPEN <expression> ROUND_CLOSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE
     // ELSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE <---- this line is optional 
 
-    if (
-        context->num_tokens - context->token_pos < 2 || 
-        context->tokens[context->token_pos].token_type != IF ||
-        context->tokens[context->token_pos+1].token_type != ROUND_OPEN
-    ) return INVALID_NODE;
+    // IF ROUND_OPEN
+    if (!step(context, IF) || !step(context, ROUND_OPEN)) return INVALID_NODE;
 
-    context->token_pos += 2; // skipping IF ROUND_OPEN 
+    // IF ROUND_OPEN <expression>
     struct Node first_child = parse_expression(context);
     if (first_child.node_type == INVALID) return INVALID_NODE;
 
-    if (
-        context->num_tokens - context->token_pos < 2 || 
-        context->tokens[context->token_pos].token_type != ROUND_CLOSE ||
-        context->tokens[context->token_pos+1].token_type != CURLY_OPEN
-    ) return INVALID_NODE; 
+    // IF ROUND_OPEN <expression> ROUND_CLOSE CURLY_OPEN
+    if (!step(context, ROUND_CLOSE) || !step(context, CURLY_OPEN)) return INVALID_NODE;
 
-    context->token_pos += 2; // skipping ROUND_CLOSE CURLY_OPEN 
+    // IF ROUND_OPEN <expression> ROUND_CLOSE CURLY_OPEN <stmt_sequence>
     struct Node second_child = parse_stmt_sequence(context);
     if (second_child.node_type == INVALID) return INVALID_NODE;
 
-    if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != CURLY_CLOSE) {
-        return INVALID_NODE;
-    }
-    context->token_pos += 1; // skipping CURLY_CLOSE 
+    // IF ROUND_OPEN <expression> ROUND_CLOSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE
+    if (!step(context, CURLY_CLOSE)) return INVALID_NODE;
 
     // Parse the ELSE block 
-    if (context->token_pos < context->num_tokens && context->tokens[context->token_pos].token_type == ELSE) {
-        context->token_pos += 1; // skipping ELSE
-        if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != CURLY_OPEN) {
-            return INVALID_NODE;
-        }
+    if (peek(context, ELSE)) {
+        // ELSE
+        context->token_pos += 1;
+       
+        // ELSE CURLY_OPEN
+        if (!step(context, CURLY_OPEN)) return INVALID_NODE;
 
-        context->token_pos += 1; // skipping CURLY_OPEN 
+        // ELSE CURLY_OPEN <stmt_sequence>
         struct Node third_child = parse_stmt_sequence(context);
         if (third_child.node_type == INVALID) return INVALID_NODE;
         
-        if (context->token_pos >= context->num_tokens || context->tokens[context->token_pos].token_type != CURLY_CLOSE) {
-            return INVALID_NODE;
-        }
-        context->token_pos += 1; // skipping CURLY_CLOSE 
+        // ELSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE
+        if (!step(context, CURLY_CLOSE)) return INVALID_NODE;
 
         struct Node *children = malloc(3 * sizeof(struct Node));
         children[0] = first_child;
@@ -387,25 +359,17 @@ struct Node parse_function(struct ParserContext *context) {
     // FN IDENTIFIER ROUND_OPEN <comma _separated identifiers> ROUND_CLOSE
     // CURLY_OPEN <stmt_sequence> CURLY_CLOSE 
 
-    if (
-        context->num_tokens - context->token_pos < 3 || 
-        context->tokens[context->token_pos].token_type != FN || 
-        context->tokens[context->token_pos+1].token_type != IDENTIFIER || 
-        context->tokens[context->token_pos+2].token_type != ROUND_OPEN 
-    ) return INVALID_NODE;
-
     int function_name_token_pos = context->token_pos+1;
 
-    // parse the arguments 
-    context->token_pos += 3; // skipping FN IDENTIFIER ROUND_OPEN
-    if (context->token_pos >= context->num_tokens) return INVALID_NODE;
+    // FN IDENTIFIER ROUND_OPEN
+    if (!step(context, FN) || !step(context, IDENTIFIER) || !step(context, ROUND_OPEN)) {
+        return INVALID_NODE;
+    }
+
     char **args = malloc(10 * sizeof(void*));
     int args_length = 0;
     int args_capacity = 10;
-    if (context->tokens[context->token_pos].token_type == ROUND_CLOSE) {
-        context->token_pos += 1;
-    }
-    else {
+    if (!step(context, ROUND_CLOSE)) {
         while(1) {  
             struct Node next_node = parse_number_or_variable(context);
             
@@ -420,35 +384,28 @@ struct Node parse_function(struct ParserContext *context) {
             }
             args[args_length++] = next_node.value; // ownership transfer
             
-            if (context->token_pos < context->num_tokens && context->tokens[context->token_pos].token_type == COMMA) { // TODO peek function
-                context->token_pos += 1; 
-            }
-            else if (context->token_pos < context->num_tokens && context->tokens[context->token_pos].token_type == ROUND_CLOSE) {
-                context->token_pos += 1;
+            if (!step(context, COMMA)) {
+                if (!step(context, ROUND_CLOSE)) return INVALID_NODE;
                 break;
             }
-            else return INVALID_NODE;
         }
     }
 
-    if(context->token_pos == context->num_tokens || context->tokens[context->token_pos].token_type != CURLY_OPEN) {
-        cleanup_double_array(args, args_length);
-        return INVALID_NODE;
-    }
-    context->token_pos += 1; // skipping CURLY_OPEN
+    // CURLY_OPEN
+    if (!step(context, CURLY_OPEN)) return INVALID_NODE;
 
+    // CURLY_OPEN <stmt_sequence>
     struct Node child_node = parse_stmt_sequence(context);
     if (child_node.node_type == INVALID) {
         cleanup_double_array(args, args_length);
         return INVALID_NODE;
     }
 
-    //if(!advance(tokens, num_tokens, token_pos, (struct Token[]){})) TODO 
-    if(context->token_pos == context->num_tokens || context->tokens[context->token_pos].token_type != CURLY_CLOSE) {
+    // CURLY_OPEN <stmt_sequence> CURLY_CLOSE
+    if(!step(context, CURLY_CLOSE)) {
         cleanup_double_array(args, args_length);
         return INVALID_NODE;
     }
-    context->token_pos += 1; // skipping CURLY_CLOSE 
 
     struct Node *children = malloc(sizeof(struct Node));
     children[0] = child_node; 
@@ -476,18 +433,15 @@ struct Node parse_stmt_sequence(struct ParserContext *context) {
     while(1) {
         struct Node next_node;
 
-        if (context->token_pos >= context->num_tokens) break;
-        if (context->tokens[context->token_pos].token_type == LET) next_node = parse_declaration(context);
-        else if (context->tokens[context->token_pos].token_type == IDENTIFIER) next_node = parse_assignment(context);
-        else if (context->tokens[context->token_pos].token_type == RETURN) next_node = parse_return_stmt(context);
-        else if (context->tokens[context->token_pos].token_type == PRINT) next_node = parse_print_stmt(context);
-        else if (context->tokens[context->token_pos].token_type == IF) next_node = parse_if_else_stmt(context);
-        else if (context->tokens[context->token_pos].token_type == FN) next_node = parse_function(context);
+        if (peek(context, LET)) next_node = parse_declaration(context);
+        else if (peek(context, IDENTIFIER)) next_node = parse_assignment(context);
+        else if (peek(context, RETURN)) next_node = parse_return_stmt(context);
+        else if (peek(context, PRINT)) next_node = parse_print_stmt(context);
+        else if (peek(context, IF)) next_node = parse_if_else_stmt(context);
+        else if (peek(context, FN)) next_node = parse_function(context);
         else break; 
         
-        if (next_node.node_type == INVALID) {
-            return INVALID_NODE;
-        }
+        if (next_node.node_type == INVALID) return INVALID_NODE;
 
         if (children_length == children_capacity) {
             children_capacity *= 2;
@@ -549,13 +503,11 @@ char ast_equal(struct Node *left, struct Node *right) {
 
 /*
 TODOs 
-- add step function for stepping over single char and return 1 or 0 status code 
 - support for empty function and if-else bodies, and empty programs
 - implement cleanup_node
 - descriptive syntax errors attached to invalid nodes
 - remove brackets from if else 
 - add back tokentype names for logging
-- add peek function (similar to step function)
 - a proper TestCase struct for parser and tokenizer test cases
 - support for function call expressions
 */
