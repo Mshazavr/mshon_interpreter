@@ -54,47 +54,12 @@ void test_tokenizer() {
     }
 }
 
-
 void test_parser() {
-    char *code = "(56 +  (4 * ((7)) * table) - Brazil)";
-    struct Node expected_node = {
-        .node_type = ARITHMETIC,
-        .operators = (enum TokenType[]){PLUS, MINUS},
-        .children = (struct Node[]) {
-            {.node_type = NUMBER, .value = "56"},
-            {
-                .node_type = ARITHMETIC,
-                .operators = (enum TokenType[]){MULT, MULT}, 
-                .children = (struct Node[]) {
-                    {.node_type = NUMBER, .value = "4"},
-                    {.node_type = NUMBER, .value = "7"},
-                    {.node_type = VARIABLE, .value = "table"}
-                },
-                .children_length = 3
-            },
-            {.node_type = VARIABLE, .value = "Brazil"},
-        },
-        .children_length = 3
-    };
-    
-    // Tokenize 
-    struct TokenizerState tokenizer_state = init_tokenizer_state(code);
-    tokenize(&tokenizer_state);
-
-    // Parse
-    struct Node root = parse_ast(tokenizer_state.parsed_tokens, tokenizer_state.parsed_tokens_length);
-
-    assert (ast_equal(&root, &expected_node));
-    //print_node(&root, 0);
-}
-
-void test_parser_let() {
     //char *code = "let Brazil = 42 + (gg - 1 - 12); Brazil = ((444));";
     //char *code = "if x + 1 - 2 { let brazil = mentioned; } else { cuba = 21; }";
     //char *code = "fn main(x, y) { let x = 12; print x + y; return y-x; }";
-    //char *code = "let x = fff(aa, 43-1+Brazil, your_func(Mentioned));";
-    char *code = "";
-    
+    char *code = "let x = fff(aa, 43-1+Brazil, (your_func(Mentioned)));";
+    //char *code = "";
     //struct Node expected_node = {.node_type = ARITHMETIC,};
     
     // Tokenize 
@@ -110,9 +75,7 @@ void test_parser_let() {
 
 
 int main() {
-    //test_tokenizer();
-    //test_parser();
-
-    test_parser_let();
+    test_tokenizer();
+    test_parser();
     return 0;
 }
