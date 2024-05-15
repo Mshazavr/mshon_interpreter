@@ -10,7 +10,7 @@ const char *NodeTypeNames[] = {
     "NUMBER",
     "VARIABLE",
     "ARITHMETIC",
-    "EQUALITY",
+    "FUNCTION_CALL",
     "INVALID",
     "IF_ELSE_STMT",
     "FUNCTION",
@@ -113,6 +113,68 @@ struct Node parse_number_or_variable(struct ParserContext *context) {
     return node;
 }
 
+struct Node parse_function_call(struct ParserContext *context) {
+    // IDENTIFIER ROUND_OPEN <comma separated expressions> ROUND_CLOSE
+
+    // IDENTIFIER
+    if (!peek(context, IDENTIFIER)) return INVALID_NODE;
+    char *value = malloc(strlen(context->tokens[context->token_pos].token_value)+1);
+    value = strcpy(value, context->tokens[context->token_pos].token_value);
+    context->token_pos += 1;
+
+    // IDENTIFIER ROUND_OPEN
+    if (!step(context, ROUND_OPEN)) {
+        free(value);
+        return INVALID_NODE;
+    }
+
+    // IDENTIFIER ROUND_OPEN <comma separated expressions>
+    struct Node *children = malloc(10 * sizeof(struct Node));
+    int children_length = 0;
+    int children_capacity = 10;
+    while(1) {
+        if (peek(context, ROUND_CLOSE)) break;
+        struct Node next_node = parse_expression(context);
+        if (next_node.node_type == INVALID) {
+            for (int i = 0; i < children_length; ++i) cleanup_node(children+i);
+            free(children);
+            free(value);
+            return INVALID_NODE;
+        }
+
+        if (children_length == children_capacity) {
+            children_capacity *= 2;
+            children = realloc(children, children_capacity * sizeof(struct Node));
+        }
+        children[children_length++] = next_node; 
+        
+        if (peek(context, ROUND_CLOSE)) break;
+        if (!step(context, COMMA)) {
+            for (int i = 0; i < children_length; ++i) cleanup_node(children+i);
+            free(children);
+            free(value);
+            return INVALID_NODE;
+        }
+    }
+
+    // IDENTIFIER ROUND_OPEN <comma separated expressions> ROUND_CLOSE
+    if (!step(context, ROUND_CLOSE)) {
+        for (int i = 0; i < children_length; ++i) cleanup_node(children+i);
+        free(children);
+        free(value);
+        return INVALID_NODE;
+    }
+
+    struct Node node = {
+        .node_type = FUNCTION_CALL,
+        .value = value,
+        .children_length = children_length,
+        .children = realloc(children, children_length * sizeof(struct Node))
+    };
+
+    return node;
+}
+
 struct Node parse_bracket_expression(struct ParserContext *context) {
     if (!step(context, ROUND_OPEN)) return INVALID_NODE;
     struct Node child_node = parse_expression(context);
@@ -137,10 +199,26 @@ struct Node parse_expression(struct ParserContext *context) {
         // Parse the next operand
         struct Node next_node;
         if (peek(context, ROUND_OPEN)) next_node = parse_bracket_expression(context);
-        else if (peek(context, NUMERIC_LITERAL) || peek(context, IDENTIFIER)) {
-            next_node = parse_number_or_variable(context);
+        else if (peek(context, NUMERIC_LITERAL)) next_node = parse_number_or_variable(context);
+        else if (peek(context, IDENTIFIER)) {
+            context->token_pos+=1;
+            if(peek(context, ROUND_OPEN)) {
+                context->token_pos-=1;
+                next_node = parse_function_call(context);
+            }
+            else {
+                context->token_pos-=1;
+                next_node = parse_number_or_variable(context);
+            }
         }
         else break;
+
+        if (next_node.node_type == INVALID) {
+            for (int i = 0; i < children_length; ++i) cleanup_node(children_buffer+i);
+            free(children_buffer);
+            free(operators_buffer);
+            return INVALID_NODE;
+        }
         
         // Add the operand to the buffer
         {
@@ -165,6 +243,7 @@ struct Node parse_expression(struct ParserContext *context) {
     }
 
     if (children_length == 0) {
+        for (int i = 0; i < children_length; ++i) cleanup_node(children_buffer+i);
         free(children_buffer);
         free(operators_buffer);
         return INVALID_NODE;
@@ -393,7 +472,10 @@ struct Node parse_function(struct ParserContext *context) {
             args[args_length++] = next_node.value; // ownership transfer
             
             if (!step(context, COMMA)) {
-                if (!step(context, ROUND_CLOSE)) return INVALID_NODE;
+                if (!step(context, ROUND_CLOSE)) {
+                    cleanup_double_array(args, args_length);
+                    return INVALID_NODE;
+                }
                 break;
             }
         }
@@ -424,7 +506,7 @@ struct Node parse_function(struct ParserContext *context) {
     struct Node node = {
         .node_type = FUNCTION,
         .value = value,
-        .args = args,
+        .args = realloc(args, args_length * sizeof(void*)),
         .args_length = args_length,
         .children = children, 
         .children_length = 1 
@@ -461,7 +543,7 @@ struct Node parse_stmt_sequence(struct ParserContext *context) {
     struct Node node = {
         .node_type = STMT_SEQUENCE,
         .children_length = children_length, 
-        .children = realloc(children, children_capacity * sizeof(struct Node))
+        .children = realloc(children, children_length * sizeof(struct Node))
     };
 
     return node;
@@ -511,9 +593,9 @@ char ast_equal(struct Node *left, struct Node *right) {
 
 /*
 TODOs 
+- support for function call expressions
 - support for empty function and if-else bodies, and empty programs
 - descriptive syntax errors attached to invalid nodes
 - remove brackets from if else 
 - a proper TestCase struct for parser and tokenizer test cases
-- support for function call expressions
 */

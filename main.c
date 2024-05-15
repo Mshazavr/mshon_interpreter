@@ -91,7 +91,9 @@ void test_parser() {
 void test_parser_let() {
     //char *code = "let Brazil = 42 + (gg - 1 - 12); Brazil = ((444));";
     //char *code = "if (x + 1 - 2) { let brazil = mentioned; } else { cuba = 21; }";
-    char *code = "fn main(x, y) { let x = 12; print x + y; return y-x; }";
+    //char *code = "fn main(x, y) { let x = 12; print x + y; return y-x; }";
+    char *code = "let x = fff(aa, 43-1+Brazil, your_func(Mentioned));";
+    
     //struct Node expected_node = {.node_type = ARITHMETIC,};
     
     // Tokenize 

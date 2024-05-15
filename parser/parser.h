@@ -11,7 +11,7 @@ enum NodeType {
     NUMBER,
     VARIABLE,
     ARITHMETIC,
-    EQUALITY,
+    FUNCTION_CALL,
 
     // Error Management
     INVALID,
@@ -52,9 +52,10 @@ struct ParserContext {
 
 
 // Expression Parsers
-struct Node parse_expression(struct ParserContext *context);
 struct Node parse_number_or_variable(struct ParserContext *context);
+struct Node parse_function_call(struct ParserContext *context);
 struct Node parse_bracket_expression(struct ParserContext *context);
+struct Node parse_expression(struct ParserContext *context);
 
 // Statement Parsers
 struct Node parse_declaration(struct ParserContext *context);

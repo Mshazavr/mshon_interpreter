@@ -55,7 +55,7 @@ char is_whitespace(char c) {
 }
 
 char is_alphabetical(char c) {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
 char is_numeric(char c) {

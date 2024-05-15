@@ -48,3 +48,8 @@ struct TokenizerState init_tokenizer_state(char *code);
 void tokenize(struct TokenizerState *tokenizer_state);
 
 #endif
+
+/*
+TODOs 
+- tokenizer fails gracefully in case of unexpected char
+*/
