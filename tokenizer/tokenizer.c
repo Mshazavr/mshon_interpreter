@@ -2,6 +2,33 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Used for logging
+const char *TokeTypeNames[] = {
+    "PLUS",
+    "MINUS",
+    "DIV",
+    "MULT",
+    "ROUND_OPEN",
+    "ROUND_CLOSE",
+    "CURLY_OPEN",
+    "CURLY_CLOSE",
+    "SQUARE_OPEN",
+    "SQUARE_CLOSE",
+    "SEMICOLON", 
+    "COMMA",
+    "EQUAL",
+    "DOUBLE_EQUAL",
+    //"DOUBLE_QUOTES", TODO: adding string support
+    "IF",
+    "ELSE",
+    "FN",
+    "LET",
+    "RETURN",
+    "PRINT",
+    "NUMERIC_LITERAL",
+    "IDENTIFIER",
+};
+
 struct TokenizerState init_tokenizer_state(char *code) {
     int parsed_tokens_capacity = 10;
     struct TokenizerState tokenizer_state = {

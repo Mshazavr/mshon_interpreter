@@ -1,6 +1,9 @@
 #ifndef __TOKENIZER__
 #define __TOKENIZER__
 
+// Used for logging
+extern const char *TokeTypeNames[];
+
 enum TokenType {
     PLUS,
     MINUS,

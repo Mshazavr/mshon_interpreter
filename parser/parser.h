@@ -3,6 +3,9 @@
  
 #include "../tokenizer/tokenizer.h"
 
+// Used for logging 
+extern const char *NodeTypeNames[];
+
 enum NodeType {
     // Expressions
     NUMBER,

@@ -6,7 +6,7 @@
 
 
 // Used for logging
-char *NodeTypeNames[] = {
+const char *NodeTypeNames[] = {
     "NUMBER",
     "VARIABLE",
     "ARITHMETIC",
@@ -40,7 +40,7 @@ void print_node(struct Node *node, int indent_count) {
         print_indent(indent_count);
         printf("Node operators: [");
         for (int i = 0; i < node->children_length - 1; ++i) {
-            printf("%d, ", node->operators[i]);
+            printf("%s, ", TokeTypeNames[node->operators[i]]);
         }
         printf("]\n");
     }
@@ -66,8 +66,16 @@ void print_node(struct Node *node, int indent_count) {
     }
 }
 
-void cleanup_node(struct Node node) {
-    return;
+void cleanup_node(struct Node *node) {
+    free(node->value);
+    free(node->args);
+    free(node->operators);
+    for(int i = 0; i < node->args_length; ++i) {
+        free(node->args[i]);
+    }
+    for(int i = 0; i < node->children_length; ++i) {
+        cleanup_node(node->children+i);
+    }
 }
 
 void cleanup_double_array(char **args, int args_length) {
@@ -469,7 +477,7 @@ struct Node parse_ast(struct Token *tokens, int num_tokens) {
     struct Node result = parse_stmt_sequence(&context);
     
     if (context.token_pos != num_tokens) {
-        cleanup_node(result);
+        cleanup_node(&result);
         result = INVALID_NODE;
     }
     
@@ -504,10 +512,8 @@ char ast_equal(struct Node *left, struct Node *right) {
 /*
 TODOs 
 - support for empty function and if-else bodies, and empty programs
-- implement cleanup_node
 - descriptive syntax errors attached to invalid nodes
 - remove brackets from if else 
-- add back tokentype names for logging
 - a proper TestCase struct for parser and tokenizer test cases
 - support for function call expressions
 */
