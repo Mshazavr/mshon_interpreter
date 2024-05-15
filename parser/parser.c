@@ -594,5 +594,4 @@ char ast_equal(struct Node *left, struct Node *right) {
 /*
 TODOs 
 - descriptive syntax errors attached to invalid nodes
-- a proper TestCase struct for parser and tokenizer test cases
 */

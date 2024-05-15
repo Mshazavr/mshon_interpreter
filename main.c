@@ -5,7 +5,15 @@
 #include <assert.h>
 
 void test_tokenizer() {
-    char *code = "let xd = 12; let y = 14; fn main() {if (xd == y - 2) {print(xd + y);}}";
+    char *code = (
+        "let xd = 12;"
+        "let y = 14;"
+        "fn main() {"
+        "    if (xd == y - 2) {"
+        "        print(xd + y);"
+        "    }"
+        "}"
+    );
     struct Token expected_tokens[] = {
         {LET}, 
         {IDENTIFIER, "xd"}, 
