@@ -19,7 +19,7 @@ const char *NodeTypeNames[] = {
     "RETURN_STMT",
     "PRINT_STMT",
     "STMT_SEQUENCE",
-};
+}; 
 
 struct Node INVALID_NODE = { .node_type = INVALID };
 
@@ -106,8 +106,7 @@ struct Node parse_number_or_variable(struct ParserContext *context) {
     if (peek(context, NUMERIC_LITERAL)) node.node_type = NUMBER;
     if (peek(context, IDENTIFIER)) node.node_type = VARIABLE;
 
-    node.value = malloc(strlen(context->tokens[context->token_pos].token_value) + 1);
-    strcpy(node.value, context->tokens[context->token_pos].token_value);
+    node.value = strdup(context->tokens[context->token_pos].token_value);
 
     context->token_pos += 1;
     return node;
@@ -118,8 +117,7 @@ struct Node parse_function_call(struct ParserContext *context) {
 
     // IDENTIFIER
     if (!peek(context, IDENTIFIER)) return INVALID_NODE;
-    char *value = malloc(strlen(context->tokens[context->token_pos].token_value)+1);
-    value = strcpy(value, context->tokens[context->token_pos].token_value);
+    char *value = strdup(context->tokens[context->token_pos].token_value);
     context->token_pos += 1;
 
     // IDENTIFIER ROUND_OPEN
@@ -500,8 +498,7 @@ struct Node parse_function(struct ParserContext *context) {
     struct Node *children = malloc(sizeof(struct Node));
     children[0] = child_node; 
     
-    char *value = malloc(strlen(context->tokens[function_name_token_pos].token_value)+1);
-    value = strcpy(value, context->tokens[function_name_token_pos].token_value);
+    char *value = strdup(context->tokens[function_name_token_pos].token_value);
 
     struct Node node = {
         .node_type = FUNCTION,
@@ -594,4 +591,7 @@ char ast_equal(struct Node *left, struct Node *right) {
 /*
 TODOs 
 - descriptive syntax errors attached to invalid nodes
-*/
+- check if allocations were NULL
+- use typedef instead of struct
+- use an array buffer for storing the nodes instead of mallocing on the go - compare performance
+*/ 

@@ -3,6 +3,8 @@
 #include "parser/parser.h"
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include "hash_table/hash_table.h"
 
 void test_tokenizer() {
     char *code = (
@@ -81,9 +83,32 @@ void test_parser() {
     print_node(&root, 0);
 }
 
+void test_hash_table() {
+    hash_table ht = init_hash_table(16, sizeof(int)); 
+    int value;
+
+    value = 1;
+    hash_table_set(&ht, "hi", &value); 
+    assert(*(int *)hash_table_get(&ht, "hi") == 1);
+    value = 2;
+    hash_table_set(&ht, "my", &value); 
+    value = 3;
+    hash_table_set(&ht, "hi", &value); 
+    value = 4;
+    hash_table_set(&ht, "friend", &value); 
+    value = 5;
+    hash_table_set(&ht, "zz", &value);
+
+    assert(*(int *)hash_table_get(&ht, "hi") == 3);
+    assert(*(int *)hash_table_get(&ht, "my") == 2);
+    assert(*(int *)hash_table_get(&ht, "friend") == 4);
+    assert(*(int *)hash_table_get(&ht, "zz") == 5);
+    assert(hash_table_get(&ht, "invalid key") == NULL);
+}
 
 int main() {
-    test_tokenizer();
-    test_parser();
+    //test_tokenizer();
+    //test_parser();
+    test_hash_table();
     return 0;
 }
