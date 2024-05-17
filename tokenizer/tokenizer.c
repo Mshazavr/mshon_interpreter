@@ -29,10 +29,10 @@ const char *TokeTypeNames[] = {
     "IDENTIFIER",
 };
 
-struct TokenizerState init_tokenizer_state(char *code) {
+TokenizerState init_tokenizer_state(char *code) {
     int parsed_tokens_capacity = 10;
-    struct TokenizerState tokenizer_state = {
-        .parsed_tokens = malloc(parsed_tokens_capacity * sizeof(struct Token)),
+    TokenizerState tokenizer_state = {
+        .parsed_tokens = malloc(parsed_tokens_capacity * sizeof(Token)),
         .parsed_tokens_capacity = parsed_tokens_capacity,
         .parsed_tokens_length = 0,
         .code = code
@@ -40,12 +40,12 @@ struct TokenizerState init_tokenizer_state(char *code) {
     return tokenizer_state;
 }
 
-void tokenizer_state_adjust_capacity(struct TokenizerState *tokenizer_state) {
+void tokenizer_state_adjust_capacity(TokenizerState *tokenizer_state) {
      if (tokenizer_state->parsed_tokens_capacity == tokenizer_state->parsed_tokens_length) {
         tokenizer_state->parsed_tokens_capacity *= 2;
         tokenizer_state->parsed_tokens = realloc(
             tokenizer_state->parsed_tokens, 
-            tokenizer_state->parsed_tokens_capacity * sizeof(struct Token)
+            tokenizer_state->parsed_tokens_capacity * sizeof(Token)
         );
      }
 }
@@ -66,7 +66,7 @@ char is_alphanumeric(char c) {
     return is_alphabetical(c) || is_numeric(c);
 }
 
-void parse_next_token(struct TokenizerState *tokenizer_state) {
+void parse_next_token(TokenizerState *tokenizer_state) {
     while(is_whitespace(tokenizer_state->code[0])) {
         ++tokenizer_state->code;
         continue;
@@ -74,7 +74,7 @@ void parse_next_token(struct TokenizerState *tokenizer_state) {
     
     if (tokenizer_state->code[0] == '\0') return; 
 
-    struct Token next_token = {.token_type = IDENTIFIER, .token_value = NULL};
+    Token next_token = {.token_type = IDENTIFIER, .token_value = NULL};
 
     if (tokenizer_state->code[0] == '+') next_token.token_type = PLUS;
     else if (tokenizer_state->code[0] == '-') next_token.token_type = MINUS;
@@ -135,7 +135,7 @@ void parse_next_token(struct TokenizerState *tokenizer_state) {
     tokenizer_state->parsed_tokens[tokenizer_state->parsed_tokens_length++] = next_token;
 }
 
-void tokenize(struct TokenizerState *tokenizer_state) {
+void tokenize(TokenizerState *tokenizer_state) {
     while (tokenizer_state->code[0] != '\0') {
         parse_next_token(tokenizer_state);
     }

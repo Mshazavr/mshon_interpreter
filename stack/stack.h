@@ -1,3 +1,7 @@
+#ifndef __STACK__
+#define __STACK__
+
+
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -6,14 +10,18 @@ typedef struct {
     size_t capacity; 
     size_t length;
     size_t element_size;
-} stack;
+} Stack;
 
-stack init_stack(size_t capacity, size_t element_size);
+Stack init_stack(size_t capacity, size_t element_size);
 
-void delete_stack(stack *st);
+void delete_stack(Stack *st);
 
-char stack_push(stack *st, void *value);
+char stack_push(Stack *st, void *value);
 
-void stack_pop(stack *st);
+void stack_pop(Stack *st);
 
-void const *stack_top(stack *st);
+void const *stack_top(Stack *st);
+
+void const *stack_at(Stack *st, size_t offset);
+
+#endif

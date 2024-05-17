@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g -Wno-missing-field-initializers
 
-OBJ = main.o tokenizer/tokenizer.o parser/parser.o hash_table/hash_table.o stack/stack.o
+OBJ = main.o tokenizer/tokenizer.o parser/parser.o hash_table/hash_table.o stack/stack.o evaluator/evaluator.o
 
 mshon: $(OBJ)
 	$(CC) $(CFLAGS) -o mshon $(OBJ)
@@ -20,6 +20,9 @@ hash_table/hash_table.o: hash_table/hash_table.c hash_table/hash_table.h
 
 stack/stack.o: stack/stack.c stack/stack.h 
 	$(CC) $(CFLAGS) -c stack/stack.c -o stack/stack.o 
+
+evaluator/evaluator.o: evaluator/evaluator.c evaluator/evaluator.h 
+	$(CC) $(CFLAGS) -c evaluator/evaluator.c -o evaluator/evaluator.o 
 
 clean:
 	rm -f $(OBJ) mshon

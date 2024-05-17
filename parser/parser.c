@@ -6,7 +6,7 @@
 
 
 // Used for logging
-const char *NodeTypeNames[] = {
+const char *ASTNodeTypeNames[] = {
     "NUMBER",
     "VARIABLE",
     "ARITHMETIC",
@@ -21,15 +21,15 @@ const char *NodeTypeNames[] = {
     "STMT_SEQUENCE",
 }; 
 
-struct Node INVALID_NODE = { .node_type = INVALID };
+ASTNode INVALID_NODE = { .node_type = INVALID };
 
 void print_indent(int indent_count) {
     for(int i = 0; i < indent_count; ++i) printf(" ");
 }
 
-void print_node(struct Node *node, int indent_count) {
+void print_node(ASTNode *node, int indent_count) {
     print_indent(indent_count);
-    printf("Node type: %s\n", NodeTypeNames[node->node_type]);
+    printf("Node type: %s\n", ASTNodeTypeNames[node->node_type]);
 
     if (node->value) {
         print_indent(indent_count);
@@ -66,7 +66,7 @@ void print_node(struct Node *node, int indent_count) {
     }
 }
 
-void cleanup_node(struct Node *node) {
+void cleanup_node(ASTNode *node) {
     free(node->value);
     free(node->args);
     free(node->operators);
@@ -84,12 +84,12 @@ void cleanup_double_array(char **args, int args_length) {
 }
 
 // Expression Parsers 
-char peek(struct ParserContext *context, enum TokenType token_type) {
+char peek(ParserContext *context, enum TokenType token_type) {
     if (context->token_pos >= context->num_tokens) return 0;
     return context->tokens[context->token_pos].token_type == token_type;
 }
 
-char step(struct ParserContext *context, enum TokenType token_type) {
+char step(ParserContext *context, enum TokenType token_type) {
     if (context->token_pos >= context->num_tokens) return 0;
     if (context->tokens[context->token_pos].token_type == token_type) {
         context->token_pos += 1;
@@ -98,8 +98,8 @@ char step(struct ParserContext *context, enum TokenType token_type) {
     return 0;
 }
 
-struct Node parse_number_or_variable(struct ParserContext *context) {
-    struct Node node = { .node_type = 0 };
+ASTNode parse_number_or_variable(ParserContext *context) {
+    ASTNode node = { .node_type = 0 };
     if (!peek(context, NUMERIC_LITERAL) && !peek(context, IDENTIFIER)) {
         return INVALID_NODE;
     }
@@ -112,7 +112,7 @@ struct Node parse_number_or_variable(struct ParserContext *context) {
     return node;
 }
 
-struct Node parse_function_call(struct ParserContext *context) {
+ASTNode parse_function_call(ParserContext *context) {
     // IDENTIFIER ROUND_OPEN <comma separated expressions> ROUND_CLOSE
 
     // IDENTIFIER
@@ -127,12 +127,12 @@ struct Node parse_function_call(struct ParserContext *context) {
     }
 
     // IDENTIFIER ROUND_OPEN <comma separated expressions>
-    struct Node *children = malloc(10 * sizeof(struct Node));
+    ASTNode *children = malloc(10 * sizeof(ASTNode));
     int children_length = 0;
     int children_capacity = 10;
     while(1) {
         if (peek(context, ROUND_CLOSE)) break;
-        struct Node next_node = parse_expression(context);
+        ASTNode next_node = parse_expression(context);
         if (next_node.node_type == INVALID) {
             for (int i = 0; i < children_length; ++i) cleanup_node(children+i);
             free(children);
@@ -142,7 +142,7 @@ struct Node parse_function_call(struct ParserContext *context) {
 
         if (children_length == children_capacity) {
             children_capacity *= 2;
-            children = realloc(children, children_capacity * sizeof(struct Node));
+            children = realloc(children, children_capacity * sizeof(ASTNode));
         }
         children[children_length++] = next_node; 
         
@@ -163,25 +163,25 @@ struct Node parse_function_call(struct ParserContext *context) {
         return INVALID_NODE;
     }
 
-    struct Node node = {
+    ASTNode node = {
         .node_type = FUNCTION_CALL,
         .value = value,
         .children_length = children_length,
-        .children = realloc(children, children_length * sizeof(struct Node))
+        .children = realloc(children, children_length * sizeof(ASTNode))
     };
 
     return node;
 }
 
-struct Node parse_bracket_expression(struct ParserContext *context) {
+ASTNode parse_bracket_expression(ParserContext *context) {
     if (!step(context, ROUND_OPEN)) return INVALID_NODE;
-    struct Node child_node = parse_expression(context);
+    ASTNode child_node = parse_expression(context);
     if (!step(context, ROUND_CLOSE)) return INVALID_NODE;
     return child_node;
 }
 
-struct Node parse_expression(struct ParserContext *context) {
-    struct Node *children_buffer = malloc(10 * sizeof(struct Node));
+ASTNode parse_expression(ParserContext *context) {
+    ASTNode *children_buffer = malloc(10 * sizeof(ASTNode));
     int children_length = 0;
     int children_capacity = 10;
 
@@ -195,7 +195,7 @@ struct Node parse_expression(struct ParserContext *context) {
         if (context->token_pos >= context->num_tokens) break;
         
         // Parse the next operand
-        struct Node next_node;
+        ASTNode next_node;
         if (peek(context, ROUND_OPEN)) next_node = parse_bracket_expression(context);
         else if (peek(context, NUMERIC_LITERAL)) next_node = parse_number_or_variable(context);
         else if (peek(context, IDENTIFIER)) {
@@ -222,7 +222,7 @@ struct Node parse_expression(struct ParserContext *context) {
         {
             if (children_length == children_capacity) {
                 children_capacity *= 2;
-                children_buffer = realloc(children_buffer, children_capacity * sizeof(struct Node));
+                children_buffer = realloc(children_buffer, children_capacity * sizeof(ASTNode));
             }
             children_buffer[children_length++] = next_node;
         } 
@@ -247,16 +247,16 @@ struct Node parse_expression(struct ParserContext *context) {
         return INVALID_NODE;
     }
     else if (children_length == 1) {
-        struct Node result = children_buffer[0];
+        ASTNode result = children_buffer[0];
         free(children_buffer);
         free(operators_buffer);
         return result;
     }
     else {
-        struct Node result = {
+        ASTNode result = {
             .node_type = ARITHMETIC,
             .operators = realloc(operators_buffer, operators_length * sizeof(enum TokenType)),
-            .children = realloc(children_buffer, children_length * sizeof(struct Node)),
+            .children = realloc(children_buffer, children_length * sizeof(ASTNode)),
             .children_length = children_length
         };
         return result;
@@ -264,7 +264,7 @@ struct Node parse_expression(struct ParserContext *context) {
 }
 
 // Statement Parsers
-struct Node parse_declaration(struct ParserContext *context) {
+ASTNode parse_declaration(ParserContext *context) {
     // LET IDENTIFER EQUAL <expression> SEMICOLON 
 
     // LET
@@ -272,23 +272,23 @@ struct Node parse_declaration(struct ParserContext *context) {
     
     // LET IDENTIFIER
     if (!peek(context, IDENTIFIER)) return INVALID_NODE;
-    struct Node first_child = parse_number_or_variable(context);
+    ASTNode first_child = parse_number_or_variable(context);
     if (first_child.node_type == INVALID) return INVALID_NODE;
     
     // LET IDENTIFIER EQUAL
     if (!step(context, EQUAL)) return INVALID_NODE;
 
     // LET IDENTIFIER EQUAL <expression>
-    struct Node second_child = parse_expression(context);
+    ASTNode second_child = parse_expression(context);
     if (second_child.node_type == INVALID) return INVALID_NODE;
 
     // LET IDENTIFIER EQUAL <expression> SEMICOLON
     if (!step(context, SEMICOLON)) return INVALID_NODE;
 
-    struct Node *children = malloc(2 * sizeof(struct Node));
+    ASTNode *children = malloc(2 * sizeof(ASTNode));
     children[0] = first_child;
     children[1] = second_child;
-    struct Node node = {
+    ASTNode node = {
         .node_type = DECLARATION,
         .children_length = 2,
         .children = children
@@ -297,28 +297,28 @@ struct Node parse_declaration(struct ParserContext *context) {
 }
 
 
-struct Node parse_assignment(struct ParserContext *context) {
+ASTNode parse_assignment(ParserContext *context) {
     // IDENTIFIER EQUAL <expression> SEMICOLON
     
     // IDENTIFIER
     if (!peek(context, IDENTIFIER)) return INVALID_NODE;
-    struct Node first_child = parse_number_or_variable(context);
+    ASTNode first_child = parse_number_or_variable(context);
     if (first_child.node_type == INVALID) return INVALID_NODE; 
 
     // IDENTIFIER EQUAL
     if (!step(context, EQUAL)) return INVALID_NODE;
 
     // IDENTIFIER EQUAL <expression>
-    struct Node second_child = parse_expression(context);
+    ASTNode second_child = parse_expression(context);
     if (second_child.node_type == INVALID) return INVALID_NODE;
 
     // IDENTIFIER EQUAL <expression> SEMICOLON
     if (!step(context, SEMICOLON)) return INVALID_NODE;
 
-    struct Node *children = malloc(2 * sizeof(struct Node));
+    ASTNode *children = malloc(2 * sizeof(ASTNode));
     children[0] = first_child;
     children[1] = second_child;
-    struct Node node = {
+    ASTNode node = {
         .node_type = ASSIGNMENT,
         .children_length = 2,
         .children = children
@@ -327,22 +327,22 @@ struct Node parse_assignment(struct ParserContext *context) {
 }
 
 
-struct Node parse_return_stmt(struct ParserContext *context) {
+ASTNode parse_return_stmt(ParserContext *context) {
     // RETURN <expression> SEMICOLON
 
     // RETURN
     if (!step(context, RETURN)) return INVALID_NODE;
 
     // RETURN <expression>
-    struct Node child = parse_expression(context);
+    ASTNode child = parse_expression(context);
     if (child.node_type == INVALID) return INVALID_NODE;
 
     // RETURN <expression> SEMICOlON
     if (!step(context, SEMICOLON)) return INVALID_NODE;
 
-    struct Node *children = malloc(sizeof(struct Node));
+    ASTNode *children = malloc(sizeof(ASTNode));
     children[0] = child;
-    struct Node node = {
+    ASTNode node = {
         .node_type = RETURN_STMT,
         .children_length = 1,
         .children = children
@@ -351,22 +351,22 @@ struct Node parse_return_stmt(struct ParserContext *context) {
 }
 
 
-struct Node parse_print_stmt(struct ParserContext *context) {
+ASTNode parse_print_stmt(ParserContext *context) {
     // PRINT <expression> SEMICOLON
 
     // PRINT
     if (!step(context, PRINT)) return INVALID_NODE;
 
     // PRINT <expression>
-    struct Node child = parse_expression(context);
+    ASTNode child = parse_expression(context);
     if (child.node_type == INVALID) return INVALID_NODE;
 
     // PRINT <expression> SEMICOlON
     if (!step(context, SEMICOLON)) return INVALID_NODE;
 
-    struct Node *children = malloc(sizeof(struct Node));
+    ASTNode *children = malloc(sizeof(ASTNode));
     children[0] = child;
-    struct Node node = {
+    ASTNode node = {
         .node_type = PRINT_STMT,
         .children_length = 1,
         .children = children
@@ -375,7 +375,7 @@ struct Node parse_print_stmt(struct ParserContext *context) {
 }
 
 
-struct Node parse_if_else_stmt(struct ParserContext *context) {
+ASTNode parse_if_else_stmt(ParserContext *context) {
     // IF <expression> CURLY_OPEN <stmt_sequence> CURLY_CLOSE
     // ELSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE <---- this line is optional 
 
@@ -383,14 +383,14 @@ struct Node parse_if_else_stmt(struct ParserContext *context) {
     if (!step(context, IF)) return INVALID_NODE;
 
     // IF <expression>
-    struct Node first_child = parse_expression(context);
+    ASTNode first_child = parse_expression(context);
     if (first_child.node_type == INVALID) return INVALID_NODE;
 
     // IF <expression> CURLY_OPEN
     if (!step(context, CURLY_OPEN)) return INVALID_NODE;
 
     // IF <expression> CURLY_OPEN <stmt_sequence>
-    struct Node second_child = parse_stmt_sequence(context);
+    ASTNode second_child = parse_stmt_sequence(context);
     if (second_child.node_type == INVALID) return INVALID_NODE;
 
     // IF <expression> CURLY_OPEN <stmt_sequence> CURLY_CLOSE
@@ -405,18 +405,18 @@ struct Node parse_if_else_stmt(struct ParserContext *context) {
         if (!step(context, CURLY_OPEN)) return INVALID_NODE;
 
         // ELSE CURLY_OPEN <stmt_sequence>
-        struct Node third_child = parse_stmt_sequence(context);
+        ASTNode third_child = parse_stmt_sequence(context);
         if (third_child.node_type == INVALID) return INVALID_NODE;
         
         // ELSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE
         if (!step(context, CURLY_CLOSE)) return INVALID_NODE;
 
-        struct Node *children = malloc(3 * sizeof(struct Node));
+        ASTNode *children = malloc(3 * sizeof(ASTNode));
         children[0] = first_child;
         children[1] = second_child;
         children[2] = third_child;
 
-        struct Node node = {
+        ASTNode node = {
             .node_type = IF_ELSE_STMT,
             .children_length = 3,
             .children = children
@@ -425,11 +425,11 @@ struct Node parse_if_else_stmt(struct ParserContext *context) {
         return node;
     }
     else {
-        struct Node *children = malloc(2 * sizeof(struct Node));
+        ASTNode *children = malloc(2 * sizeof(ASTNode));
         children[0] = first_child;
         children[1] = second_child;
 
-        struct Node node = {
+        ASTNode node = {
             .node_type = IF_ELSE_STMT,
             .children_length = 2,
             .children = children
@@ -440,7 +440,7 @@ struct Node parse_if_else_stmt(struct ParserContext *context) {
 }
 
 
-struct Node parse_function(struct ParserContext *context) {
+ASTNode parse_function(ParserContext *context) {
     // FN IDENTIFIER ROUND_OPEN <comma _separated identifiers> ROUND_CLOSE
     // CURLY_OPEN <stmt_sequence> CURLY_CLOSE 
 
@@ -456,7 +456,7 @@ struct Node parse_function(struct ParserContext *context) {
     int args_capacity = 10;
     if (!step(context, ROUND_CLOSE)) {
         while(1) {  
-            struct Node next_node = parse_number_or_variable(context);
+            ASTNode next_node = parse_number_or_variable(context);
             
             if (next_node.node_type != VARIABLE) {
                 cleanup_double_array(args, args_length);
@@ -483,7 +483,7 @@ struct Node parse_function(struct ParserContext *context) {
     if (!step(context, CURLY_OPEN)) return INVALID_NODE;
 
     // CURLY_OPEN <stmt_sequence>
-    struct Node child_node = parse_stmt_sequence(context);
+    ASTNode child_node = parse_stmt_sequence(context);
     if (child_node.node_type == INVALID) {
         cleanup_double_array(args, args_length);
         return INVALID_NODE;
@@ -495,12 +495,12 @@ struct Node parse_function(struct ParserContext *context) {
         return INVALID_NODE;
     }
 
-    struct Node *children = malloc(sizeof(struct Node));
+    ASTNode *children = malloc(sizeof(ASTNode));
     children[0] = child_node; 
     
     char *value = strdup(context->tokens[function_name_token_pos].token_value);
 
-    struct Node node = {
+    ASTNode node = {
         .node_type = FUNCTION,
         .value = value,
         .args = realloc(args, args_length * sizeof(void*)),
@@ -512,13 +512,13 @@ struct Node parse_function(struct ParserContext *context) {
 }
 
 
-struct Node parse_stmt_sequence(struct ParserContext *context) {
-    struct Node *children = malloc(10 * sizeof(struct Node));
+ASTNode parse_stmt_sequence(ParserContext *context) {
+    ASTNode *children = malloc(10 * sizeof(ASTNode));
     int children_length = 0;
     int children_capacity = 10;
 
     while(1) {
-        struct Node next_node;
+        ASTNode next_node;
 
         if (peek(context, LET)) next_node = parse_declaration(context);
         else if (peek(context, IDENTIFIER)) next_node = parse_assignment(context);
@@ -532,28 +532,28 @@ struct Node parse_stmt_sequence(struct ParserContext *context) {
 
         if (children_length == children_capacity) {
             children_capacity *= 2;
-            children = realloc(children, children_capacity * sizeof(struct Node));
+            children = realloc(children, children_capacity * sizeof(ASTNode));
         }
         children[children_length++] = next_node;
     }
 
-    struct Node node = {
+    ASTNode node = {
         .node_type = STMT_SEQUENCE,
         .children_length = children_length, 
-        .children = realloc(children, children_length * sizeof(struct Node))
+        .children = realloc(children, children_length * sizeof(ASTNode))
     };
 
     return node;
 }
 
 // Entry points
-struct Node parse_ast(struct Token *tokens, int num_tokens) {
-    struct ParserContext context = {
+ASTNode parse_ast(Token *tokens, int num_tokens) {
+    ParserContext context = {
         .tokens = tokens,
         .num_tokens = num_tokens,
         .token_pos = 0
     };
-    struct Node result = parse_stmt_sequence(&context);
+    ASTNode result = parse_stmt_sequence(&context);
     
     if (context.token_pos != num_tokens) {
         cleanup_node(&result);
@@ -569,7 +569,7 @@ int safe_streq(const char *left, const char *right) {
     return strcmp(left, right) == 0;
 }
 
-char ast_equal(struct Node *left, struct Node *right) {
+char ast_equal(ASTNode *left, ASTNode *right) {
     if (left->node_type != right -> node_type) return 0;
     
     if(!safe_streq(left->value, right->value)) return 0; 

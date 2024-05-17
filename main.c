@@ -17,7 +17,7 @@ void test_tokenizer() {
         "    }"
         "}"
     );
-    struct Token expected_tokens[] = {
+    Token expected_tokens[] = {
         {LET}, 
         {IDENTIFIER, "xd"}, 
         {EQUAL}, 
@@ -52,7 +52,7 @@ void test_tokenizer() {
         {CURLY_CLOSE},
         {CURLY_CLOSE}
     };
-    struct TokenizerState tokenizer_state = init_tokenizer_state(code);
+    TokenizerState tokenizer_state = init_tokenizer_state(code);
     tokenize(&tokenizer_state);
     for (int i = 0; i < tokenizer_state.parsed_tokens_length; ++i) {
         assert(tokenizer_state.parsed_tokens[i].token_type == expected_tokens[i].token_type);
@@ -68,24 +68,25 @@ void test_tokenizer() {
 void test_parser() {
     //char *code = "let Brazil = 42 + (gg - 1 - 12); Brazil = ((444));";
     //char *code = "if x + 1 - 2 { let brazil = mentioned; } else { cuba = 21; }";
-    //char *code = "fn main(x, y) { let x = 12; print x + y; return y-x; }";
-    char *code = "let x = fff(aa, 43-1+Brazil, (your_func(Mentioned)));";
+    char *code = "fn main(x, y) { let x = 12; print x + y; return y-x; }";
+    //char *code = "let x = fff(aa, 43-1+Brazil, (your_func(Mentioned)));";
     //char *code = "";
     //struct Node expected_node = {.node_type = ARITHMETIC,};
     
     // Tokenize 
-    struct TokenizerState tokenizer_state = init_tokenizer_state(code);
+    TokenizerState tokenizer_state = init_tokenizer_state(code);
     tokenize(&tokenizer_state);
 
     // Parse
-    struct Node root = parse_ast(tokenizer_state.parsed_tokens, tokenizer_state.parsed_tokens_length);
+    ASTNode root = parse_ast(tokenizer_state.parsed_tokens, tokenizer_state.parsed_tokens_length);
 
     //assert (ast_equal(&root, &expected_node));
     print_node(&root, 0);
+    assert(root.node_type == STMT_SEQUENCE);
 }
 
 void test_hash_table() {
-    hash_table ht = init_hash_table(16, sizeof(int)); 
+    HashTable ht = init_hash_table(16, sizeof(int)); 
     int value;
 
     value = 1;
@@ -118,7 +119,7 @@ char cmp(A l, A r) {
 }
 
 void test_stack() {
-    stack st = init_stack(2, sizeof(A));
+    Stack st = init_stack(2, sizeof(A));
     A e1 = {.a = 1, .b = '1'};
     A e2 = {.a = 2, .b = '2'};
     stack_push(&st, &e1);
@@ -141,10 +142,9 @@ void test_stack() {
 }
 
 int main() {
-    //test_tokenizer();
-    //test_parser();
-    //test_hash_table();
-
+    test_tokenizer();
+    test_parser();
+    test_hash_table();
     test_stack();
     return 0;
 }

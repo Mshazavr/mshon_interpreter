@@ -4,8 +4,8 @@
 #include "stack.h"
 
 
-stack init_stack(size_t capacity, size_t element_size) {
-    stack st = {
+Stack init_stack(size_t capacity, size_t element_size) {
+    Stack st = {
         .buffer = malloc(capacity * element_size),
         .capacity = capacity,
         .element_size = element_size,
@@ -14,12 +14,12 @@ stack init_stack(size_t capacity, size_t element_size) {
     return st;
 }
 
-void delete_stack(stack *st) {
+void delete_stack(Stack *st) {
     free(st->buffer);
     st->buffer = NULL;
 }
 
-char stack_push(stack *st, void *value) {
+char stack_push(Stack *st, void *value) {
     if (st->length == st->capacity) {
         st->capacity *= 2;
         void *new_buffer = realloc(st->buffer, st->capacity * st->element_size);
@@ -35,12 +35,17 @@ char stack_push(stack *st, void *value) {
     return 1;
 }
 
-void stack_pop(stack *st) {
+void stack_pop(Stack *st) {
     if (st->length == 0) return;
 
     st->length -= 1; 
 }
 
-void const *stack_top(stack *st) {
+void const *stack_top(Stack *st) {
     return (char *)st->buffer + (st->length-1)*st->element_size;
+}
+
+void const *stack_at(Stack *st, size_t offset) {
+    if (offset >= st->length) return NULL;
+    return (char *)st->buffer + (st->length-1-offset)*st->element_size;
 }

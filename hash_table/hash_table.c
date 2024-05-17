@@ -17,9 +17,9 @@ static uint64_t hash_function(const char* key) {
     return hash;
 }
 
-hash_table init_hash_table(size_t capacity, size_t value_size) {
-    hash_table_row *rows = calloc(capacity, sizeof(hash_table_row));
-    hash_table table = {
+HashTable init_hash_table(size_t capacity, size_t value_size) {
+    HashTableRow *rows = calloc(capacity, sizeof(HashTableRow));
+    HashTable table = {
         .rows = rows,
         .capacity = capacity,
         .size = 0,
@@ -28,7 +28,7 @@ hash_table init_hash_table(size_t capacity, size_t value_size) {
     return table;
 }
 
-void clean_hash_table(hash_table *ht) {
+void clean_hash_table(HashTable *ht) {
     for (size_t i = 0; i < ht->capacity; ++i) {
         free(ht->rows[i].key);
         free(ht->rows[i].value);
@@ -36,10 +36,11 @@ void clean_hash_table(hash_table *ht) {
     free(ht->rows);
 }
 
-char hash_table_set(hash_table *ht, char *key, void *value) {
+char hash_table_set(HashTable *ht, char *key, void *value) {
     if (ht->capacity == ht->size) {
-        hash_table_row *new_rows = calloc(ht->capacity * 2, sizeof(hash_table_row));
-        memcpy(new_rows, ht->rows, ht->capacity * sizeof(hash_table_row));
+        HashTableRow *new_rows = calloc(ht->capacity * 2, sizeof(HashTableRow));
+        if (new_rows == NULL) return 1;
+        memcpy(new_rows, ht->rows, ht->capacity * sizeof(HashTableRow));
         ht->capacity *= 2;
     }
 
@@ -59,10 +60,10 @@ char hash_table_set(hash_table *ht, char *key, void *value) {
     ht->rows[row_index].value = malloc(ht->value_size);
     if (ht->rows[row_index].value == NULL) return 0;
     memcpy(ht->rows[row_index].value, value, ht->value_size);
-    return 1;
+    return 0;
 }
 
-void* hash_table_get(hash_table *ht, char *key) {
+void const * hash_table_get(HashTable *ht, char *key) {
     size_t row_index = hash_function(key) & (ht->capacity - 1);
     while(ht->rows[row_index].key != NULL) {
         if (strcmp(ht->rows[row_index].key, key) == 0) {

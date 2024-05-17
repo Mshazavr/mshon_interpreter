@@ -1,20 +1,26 @@
+#ifndef __HASH_TABLE__
+#define __HASH_TABLE__
+
+
 #include <stdint.h>
 #include <stdlib.h>
 
 typedef struct {
     char *key;
     void *value;
-} hash_table_row;
+} HashTableRow;
 
 typedef struct {
-    hash_table_row *rows; 
+    HashTableRow *rows; 
     size_t capacity; 
     size_t size;
     size_t value_size;
-} hash_table; 
+} HashTable; 
 
-hash_table init_hash_table(size_t capacity, size_t value_size);
-void clean_hash_table(hash_table *ht);
+HashTable init_hash_table(size_t capacity, size_t value_size);
+void clean_hash_table(HashTable *ht);
 
-char hash_table_set(hash_table *ht, char *key, void *value);
-void* hash_table_get(hash_table *ht, char *key);
+char hash_table_set(HashTable *ht, char *key, void *value);
+void const * hash_table_get(HashTable *ht, char *key);
+
+#endif

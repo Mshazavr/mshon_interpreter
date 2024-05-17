@@ -32,20 +32,20 @@ enum TokenType {
     IDENTIFIER,
 };
 
-struct Token {
+typedef struct {
     enum TokenType token_type;
     char *token_value;
-};
+} Token;
 
-struct TokenizerState {
-    struct Token *parsed_tokens;
+typedef struct {
+    Token *parsed_tokens;
     int parsed_tokens_length;
     int parsed_tokens_capacity;
     char *code; 
-};
+} TokenizerState;
 
-struct TokenizerState init_tokenizer_state(char *code);
-void tokenize(struct TokenizerState *tokenizer_state);
+TokenizerState init_tokenizer_state(char *code);
+void tokenize(TokenizerState *tokenizer_state);
 
 #endif
 
