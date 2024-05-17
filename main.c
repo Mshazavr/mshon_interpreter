@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include "hash_table/hash_table.h"
+#include "stack/stack.h"
 
 void test_tokenizer() {
     char *code = (
@@ -106,9 +107,44 @@ void test_hash_table() {
     assert(hash_table_get(&ht, "invalid key") == NULL);
 }
 
+
+typedef struct {
+    int a;
+    char b;
+} A;
+
+char cmp(A l, A r) {
+    return l.a == r.a && l.b == r.b;
+}
+
+void test_stack() {
+    stack st = init_stack(2, sizeof(A));
+    A e1 = {.a = 1, .b = '1'};
+    A e2 = {.a = 2, .b = '2'};
+    stack_push(&st, &e1);
+    stack_push(&st, &e2);
+    stack_push(&st, &e1);
+    stack_push(&st, &e2);
+
+    assert(cmp(*(A*)stack_top(&st), e2));
+    stack_pop(&st);
+    assert(cmp(*(A*)stack_top(&st), e1));
+    stack_pop(&st);
+    assert(cmp(*(A*)stack_top(&st), e2));
+    stack_pop(&st);
+    assert(cmp(*(A*)stack_top(&st), e1));
+
+    delete_stack(&st);
+
+    assert(e1.a == 1 && e1.b == '1');
+    assert(e2.a == 2 && e2.b == '2');
+}
+
 int main() {
     //test_tokenizer();
     //test_parser();
-    test_hash_table();
+    //test_hash_table();
+
+    test_stack();
     return 0;
 }

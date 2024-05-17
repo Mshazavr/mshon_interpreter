@@ -10,14 +10,14 @@
 // https://en.wikipedia.org/wiki/Fowler–Noll–Vo_hash_function
 static uint64_t hash_function(const char* key) {
     uint64_t hash = FNV_OFFSET;
-    for (const char* p = key; *p; p++) {
+    for (const char* p = key; *p; ++p) {
         hash ^= (uint64_t)(unsigned char)(*p);
         hash *= FNV_PRIME;
     }
     return hash;
 }
 
-hash_table init_hash_table(int capacity, size_t value_size) {
+hash_table init_hash_table(size_t capacity, size_t value_size) {
     hash_table_row *rows = calloc(capacity, sizeof(hash_table_row));
     hash_table table = {
         .rows = rows,
@@ -29,7 +29,7 @@ hash_table init_hash_table(int capacity, size_t value_size) {
 }
 
 void clean_hash_table(hash_table *ht) {
-    for (int i = 0; i < ht->capacity; ++i) {
+    for (size_t i = 0; i < ht->capacity; ++i) {
         free(ht->rows[i].key);
         free(ht->rows[i].value);
     }
