@@ -36,7 +36,7 @@ void clean_hash_table(HashTable *ht) {
     free(ht->rows);
 }
 
-char hash_table_set(HashTable *ht, char *key, void *value) {
+char hash_table_set(HashTable *ht, char const *key, void const *value) {
     if (ht->capacity == ht->size) {
         HashTableRow *new_rows = calloc(ht->capacity * 2, sizeof(HashTableRow));
         if (new_rows == NULL) return 1;
@@ -63,7 +63,7 @@ char hash_table_set(HashTable *ht, char *key, void *value) {
     return 0;
 }
 
-void const * hash_table_get(HashTable *ht, char *key) {
+void const * hash_table_get(HashTable const *ht, char const *key) {
     size_t row_index = hash_function(key) & (ht->capacity - 1);
     while(ht->rows[row_index].key != NULL) {
         if (strcmp(ht->rows[row_index].key, key) == 0) {

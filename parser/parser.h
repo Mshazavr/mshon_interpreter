@@ -1,7 +1,10 @@
 #ifndef __PARSER__
 #define __PARSER__
- 
+
+#include <stdint.h> 
+#include <stdlib.h>
 #include "../tokenizer/tokenizer.h"
+
 
 // Used for logging 
 extern const char *ASTNodeTypeNames[];
@@ -36,14 +39,14 @@ struct ASTNode_s {
 
     // used for function arguments
     char **args; 
-    int args_length;
+    size_t args_length;
 
     // used for arithmetic expression operators
     // the length is children_length - 1
     enum TokenType *operators; 
 
     struct ASTNode_s *children;
-    int children_length;
+    size_t children_length;
 };
 typedef struct ASTNode_s ASTNode;
 
@@ -72,6 +75,6 @@ ASTNode parse_stmt_sequence(ParserContext *context);
 // Entry points
 ASTNode parse_ast(Token *tokens, int num_tokens);
 char ast_equal(ASTNode *left, ASTNode *right); 
-void print_node(ASTNode *node, int indent_count);
+void print_node(ASTNode *node, size_t indent_count);
 
 #endif

@@ -41,7 +41,7 @@ void stack_pop(Stack *st) {
     st->length -= 1; 
 }
 
-void const *stack_top(Stack *st) {
+void *stack_top(Stack *st) {
     return (char *)st->buffer + (st->length-1)*st->element_size;
 }
 

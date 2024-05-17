@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
 
 // Used for logging
@@ -23,11 +24,11 @@ const char *ASTNodeTypeNames[] = {
 
 ASTNode INVALID_NODE = { .node_type = INVALID };
 
-void print_indent(int indent_count) {
-    for(int i = 0; i < indent_count; ++i) printf(" ");
+void print_indent(size_t indent_count) {
+    for(size_t i = 0; i < indent_count; ++i) printf(" ");
 }
 
-void print_node(ASTNode *node, int indent_count) {
+void print_node(ASTNode *node, size_t indent_count) {
     print_indent(indent_count);
     printf("Node type: %s\n", ASTNodeTypeNames[node->node_type]);
 
@@ -39,7 +40,7 @@ void print_node(ASTNode *node, int indent_count) {
     if (node->operators) {
         print_indent(indent_count);
         printf("Node operators: [");
-        for (int i = 0; i < node->children_length - 1; ++i) {
+        for (size_t i = 0; i < node->children_length - 1; ++i) {
             printf("%s, ", TokeTypeNames[node->operators[i]]);
         }
         printf("]\n");
@@ -48,14 +49,14 @@ void print_node(ASTNode *node, int indent_count) {
     if (node->args) {
         print_indent(indent_count);
         printf("Node args: [");
-        for (int i = 0; i < node->args_length; ++i) {
+        for (size_t i = 0; i < node->args_length; ++i) {
             printf("%s, ", node->args[i]);
         }
         printf("]\n");
     }
 
     if (node->children) {
-        for (int i = 0; i < node->children_length; ++i) {
+        for (size_t i = 0; i < node->children_length; ++i) {
             print_node(node->children+i, indent_count + 4);
             
             if (i < node->children_length - 1) {
@@ -70,16 +71,16 @@ void cleanup_node(ASTNode *node) {
     free(node->value);
     free(node->args);
     free(node->operators);
-    for(int i = 0; i < node->args_length; ++i) {
+    for(size_t i = 0; i < node->args_length; ++i) {
         free(node->args[i]);
     }
-    for(int i = 0; i < node->children_length; ++i) {
+    for(size_t i = 0; i < node->children_length; ++i) {
         cleanup_node(node->children+i);
     }
 }
 
-void cleanup_double_array(char **args, int args_length) {
-    for (int i = 0; i < args_length; ++i) free(args[i]);
+void cleanup_double_array(char **args, size_t args_length) {
+    for (size_t i = 0; i < args_length; ++i) free(args[i]);
     free(args);
 }
 
@@ -128,13 +129,13 @@ ASTNode parse_function_call(ParserContext *context) {
 
     // IDENTIFIER ROUND_OPEN <comma separated expressions>
     ASTNode *children = malloc(10 * sizeof(ASTNode));
-    int children_length = 0;
-    int children_capacity = 10;
+    size_t children_length = 0;
+    size_t children_capacity = 10;
     while(1) {
         if (peek(context, ROUND_CLOSE)) break;
         ASTNode next_node = parse_expression(context);
         if (next_node.node_type == INVALID) {
-            for (int i = 0; i < children_length; ++i) cleanup_node(children+i);
+            for (size_t i = 0; i < children_length; ++i) cleanup_node(children+i);
             free(children);
             free(value);
             return INVALID_NODE;
@@ -148,7 +149,7 @@ ASTNode parse_function_call(ParserContext *context) {
         
         if (peek(context, ROUND_CLOSE)) break;
         if (!step(context, COMMA)) {
-            for (int i = 0; i < children_length; ++i) cleanup_node(children+i);
+            for (size_t i = 0; i < children_length; ++i) cleanup_node(children+i);
             free(children);
             free(value);
             return INVALID_NODE;
@@ -157,7 +158,7 @@ ASTNode parse_function_call(ParserContext *context) {
 
     // IDENTIFIER ROUND_OPEN <comma separated expressions> ROUND_CLOSE
     if (!step(context, ROUND_CLOSE)) {
-        for (int i = 0; i < children_length; ++i) cleanup_node(children+i);
+        for (size_t i = 0; i < children_length; ++i) cleanup_node(children+i);
         free(children);
         free(value);
         return INVALID_NODE;
@@ -182,12 +183,12 @@ ASTNode parse_bracket_expression(ParserContext *context) {
 
 ASTNode parse_expression(ParserContext *context) {
     ASTNode *children_buffer = malloc(10 * sizeof(ASTNode));
-    int children_length = 0;
-    int children_capacity = 10;
+    size_t children_length = 0;
+    size_t children_capacity = 10;
 
     enum TokenType *operators_buffer = malloc(10 * sizeof(enum TokenType));
-    int operators_length = 0;
-    int operators_capacity = 10;
+    size_t operators_length = 0;
+    size_t operators_capacity = 10;
 
     while(1) {
         // Find operands (and operators) until hitting a wall
@@ -212,7 +213,7 @@ ASTNode parse_expression(ParserContext *context) {
         else break;
 
         if (next_node.node_type == INVALID) {
-            for (int i = 0; i < children_length; ++i) cleanup_node(children_buffer+i);
+            for (size_t i = 0; i < children_length; ++i) cleanup_node(children_buffer+i);
             free(children_buffer);
             free(operators_buffer);
             return INVALID_NODE;
@@ -241,7 +242,7 @@ ASTNode parse_expression(ParserContext *context) {
     }
 
     if (children_length == 0) {
-        for (int i = 0; i < children_length; ++i) cleanup_node(children_buffer+i);
+        for (size_t i = 0; i < children_length; ++i) cleanup_node(children_buffer+i);
         free(children_buffer);
         free(operators_buffer);
         return INVALID_NODE;
@@ -514,8 +515,8 @@ ASTNode parse_function(ParserContext *context) {
 
 ASTNode parse_stmt_sequence(ParserContext *context) {
     ASTNode *children = malloc(10 * sizeof(ASTNode));
-    int children_length = 0;
-    int children_capacity = 10;
+    size_t children_length = 0;
+    size_t children_capacity = 10;
 
     while(1) {
         ASTNode next_node;
@@ -575,12 +576,12 @@ char ast_equal(ASTNode *left, ASTNode *right) {
     if(!safe_streq(left->value, right->value)) return 0; 
     
     if (left->args_length != right->args_length) return 0;
-    for (int i = 0; i < left->args_length; ++i) {
+    for (size_t i = 0; i < left->args_length; ++i) {
         if (!safe_streq(left->args[i], right->args[i])) return 0;
     }
 
     if (left->children_length != right->children_length) return 0; 
-    for (int i = 0; i < left->children_length; ++i) {
+    for (size_t i = 0; i < left->children_length; ++i) {
         if (!ast_equal(left->children+i, right->children+i)) return 0;
     }
     

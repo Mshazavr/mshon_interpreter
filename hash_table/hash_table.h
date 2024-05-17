@@ -20,7 +20,7 @@ typedef struct {
 HashTable init_hash_table(size_t capacity, size_t value_size);
 void clean_hash_table(HashTable *ht);
 
-char hash_table_set(HashTable *ht, char *key, void *value);
-void const * hash_table_get(HashTable *ht, char *key);
+char hash_table_set(HashTable *ht, char const *key, void const *value);
+void const * hash_table_get(HashTable const *ht, char const *key);
 
 #endif

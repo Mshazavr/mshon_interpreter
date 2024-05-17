@@ -20,7 +20,7 @@ char stack_push(Stack *st, void *value);
 
 void stack_pop(Stack *st);
 
-void const *stack_top(Stack *st);
+void *stack_top(Stack *st);
 
 void const *stack_at(Stack *st, size_t offset);
 
