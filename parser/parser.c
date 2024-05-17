@@ -186,7 +186,7 @@ ASTNode parse_expression(ParserContext *context) {
     size_t children_length = 0;
     size_t children_capacity = 10;
 
-    enum TokenType *operators_buffer = malloc(10 * sizeof(enum TokenType));
+    enum OperatorType *operators_buffer = malloc(10 * sizeof(enum OperatorType));
     size_t operators_length = 0;
     size_t operators_capacity = 10;
 
@@ -235,7 +235,10 @@ ASTNode parse_expression(ParserContext *context) {
                 operators_capacity *= 2;
                 operators_buffer = realloc(operators_buffer, operators_capacity * sizeof(enum TokenType));
             }
-            operators_buffer[operators_length++] = context->tokens[context->token_pos].token_type;
+            if (peek(context, PLUS)) operators_buffer[operators_length++] = ADD_OP;
+            else if (peek(context, MINUS)) operators_buffer[operators_length++] = SUB_OP;
+            else if (peek(context, MULT)) operators_buffer[operators_length++] = MULT_OP;
+            else operators_buffer[operators_length++] = DIV_OP;
             context->token_pos += 1;
         }
         else break;

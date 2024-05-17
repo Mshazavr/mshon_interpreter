@@ -29,6 +29,13 @@ enum ASTNodeType {
     STMT_SEQUENCE,
 };
 
+enum OperatorType {
+    ADD_OP,
+    SUB_OP,
+    MULT_OP,
+    DIV_OP
+};
+
 // TODO: reduce memory footprint by introducing tags 
 // and unions
 struct ASTNode_s { 
@@ -43,7 +50,7 @@ struct ASTNode_s {
 
     // used for arithmetic expression operators
     // the length is children_length - 1
-    enum TokenType *operators; 
+    enum OperatorType *operators; 
 
     struct ASTNode_s *children;
     size_t children_length;

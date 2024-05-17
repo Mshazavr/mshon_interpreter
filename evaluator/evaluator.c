@@ -22,7 +22,7 @@ char *not_callable_message(char const *identifier) {
 }
 
 char *unexpected_arguments_message(char const *identifier) {
-    char *error_message = malloc(25+strlen(identifier)+1);
+    char *error_message = malloc(42+strlen(identifier)+1);
     if (error_message != NULL)
         sprintf(error_message, "Incorrect arguments supplied to function: %s", identifier);
     return error_message;
@@ -65,7 +65,9 @@ char allocate_stack_frame(
     memcpy(new_frame, &frame, sizeof(HashTable));
 
     for (size_t i=0; i < args_length; ++i) {
-        char error = hash_table_set(new_frame, arg_names[i], (void*)(arg_values+i));
+        uint32_t *arg = malloc(4);
+        *arg = arg_values[i];
+        char error = hash_table_set(new_frame, arg_names[i], &arg);
         if (error) {
             clean_hash_table(new_frame);
             free(new_frame);
@@ -73,9 +75,8 @@ char allocate_stack_frame(
         }
     }
 
-    char error = stack_push(&context->stack_frames, new_frame);
+    char error = !stack_push(&context->stack_frames, new_frame);
     return error;
-
 }
 
 
@@ -107,7 +108,7 @@ void evaluate_number(ASTNode const *node, EvaluatorContext *context) {
 
 void evaluate_variable(ASTNode const *node, EvaluatorContext *context) {
     char const *value = search_identifier_value(context, node->value);
-    
+
     if (value == NULL) {
         context->error_code = UNDECLARED_IDENTIFIER;
         context->error_message = undefined_identifier_message(node->value);
@@ -134,10 +135,10 @@ void evaluate_arithmetic(ASTNode const *node, EvaluatorContext *context) {
 
     EvaluationResult result = {.number = child_evaluations[0]};
     for (size_t i = 1; i < node->children_length; ++i) {
-        if (node->operators[i-1] == '+') result.number += child_evaluations[i];
-        else if (node->operators[i-1] == '-') result.number -= child_evaluations[i];
-        else if (node->operators[i-1] == '*') result.number *= child_evaluations[i];
-        else if (node->operators[i-1] == '/') result.number /= child_evaluations[i];
+        if (node->operators[i-1] == ADD_OP) result.number += child_evaluations[i];
+        else if (node->operators[i-1] == SUB_OP) result.number -= child_evaluations[i];
+        else if (node->operators[i-1] == MULT_OP) result.number *= child_evaluations[i];
+        else if (node->operators[i-1] == DIV_OP) result.number /= child_evaluations[i];
     }
     context->result_type = NUMBER_TYPE;
     context->result = result;
@@ -145,7 +146,7 @@ void evaluate_arithmetic(ASTNode const *node, EvaluatorContext *context) {
 
 void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
     ASTNode *function_node = (ASTNode *)search_identifier_value(context, node->value);
-    
+
     if (function_node == NULL) {
         context->error_code = UNDECLARED_IDENTIFIER;
         context->error_message = undefined_identifier_message(node->value);
@@ -155,11 +156,13 @@ void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
     if (function_node->node_type != FUNCTION) {
         context->error_code = NOT_CALLABLE,
         context->error_message = not_callable_message(node->value);
+        return;
     }
 
     if (node->children_length != function_node->args_length) {
         context->error_code = UNEXPECTED_ARGUMENTS;
         context->error_message = unexpected_arguments_message(node->value);
+        return;
     }
 
     uint32_t *arg_values = malloc(node->children_length * 4);
@@ -186,7 +189,7 @@ void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
         return;
     }
 
-    evaluate_statement_sequence(function_node, context);
+    evaluate_statement_sequence(function_node->children+0, context);
 }
 
 void evaluate_expression_node(ASTNode const *node, EvaluatorContext *context) {
@@ -204,7 +207,7 @@ void evaluate_expression_node(ASTNode const *node, EvaluatorContext *context) {
 
 void evaluate_declaration(ASTNode const *node, EvaluatorContext *context) { 
     HashTable *current_frame = stack_top(&context->stack_frames);
-    char *name = node->children[0].value;
+    char const *name = node->children[0].value;
     
     if (hash_table_get(current_frame, name) != NULL) {
         context->error_code = VARIABLE_EXISTS;
@@ -245,7 +248,7 @@ void evaluate_return(ASTNode const *node, EvaluatorContext *context) {
 void evaluate_print(ASTNode const *node, EvaluatorContext *context) {
     evaluate_expression_node(node->children+0, context);
     if (context->error_code) return;
-    printf("Side Effect: %d", context->result.number);
+    printf("Side Effect: %d\n", context->result.number);
 }
 
 void evaluate_if_else(ASTNode const *node, EvaluatorContext *context) {
@@ -270,20 +273,19 @@ void evaluate_function(ASTNode const *node, EvaluatorContext *context) {
         return;
     }
 
-    ASTNode *child_node = node->children+0;
-    char error = hash_table_set(current_frame, name, &child_node);
+    char error = hash_table_set(current_frame, name, &node);
     if (error) context->error_code = INTERNAL;
 }
 
 void evaluate_statement_sequence(ASTNode const *node, EvaluatorContext *context) {
     for (size_t i = 0; i < node->children_length; ++i) {
-        if (node->children[i].node_type == DECLARATION) evaluate_declaration(node, context);
-        else if (node->children[i].node_type == ASSIGNMENT) evaluate_assignment(node, context);
-        else if (node->children[i].node_type == PRINT_STMT) evaluate_print(node, context); 
-        else if (node->children[i].node_type == IF_ELSE_STMT) evaluate_if_else(node, context);
-        else if (node->children[i].node_type == FUNCTION) evaluate_function(node, context);
+        if (node->children[i].node_type == DECLARATION) evaluate_declaration(node->children+i, context);
+        else if (node->children[i].node_type == ASSIGNMENT) evaluate_assignment(node->children+i, context);
+        else if (node->children[i].node_type == PRINT_STMT) evaluate_print(node->children+i, context); 
+        else if (node->children[i].node_type == IF_ELSE_STMT) evaluate_if_else(node->children+i, context);
+        else if (node->children[i].node_type == FUNCTION) evaluate_function(node->children+i, context);
         else { // node_type == RETURN 
-            evaluate_return(node, context);
+            evaluate_return(node->children+i, context);
             return;
         }
         if (context->error_code) return;
@@ -342,4 +344,5 @@ TODO
 - string type support (currently only supports ints). Also maybe floats in future etc...
 - negative number support
 - synthetic stress test (to test performance improvement after using bump allocation in certain places like the parser)
+- better way to handle hash table storage (tagged union instead of a generic pointer potentially)
 */
