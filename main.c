@@ -10,7 +10,7 @@
 
 void test_tokenizer() {
     char *code = (
-        "let xd = 12;"
+        "let xd = -12;"
         "let y = 14;"
         "fn main() {"
         "    if (xd == y - 2) {"
@@ -22,6 +22,7 @@ void test_tokenizer() {
         {LET}, 
         {IDENTIFIER, "xd"}, 
         {EQUAL}, 
+        {MINUS},
         {NUMERIC_LITERAL, "12"}, 
         {SEMICOLON},
         {LET}, 
@@ -69,9 +70,10 @@ void test_tokenizer() {
 void test_parser() {
     //char *code = "let Brazil = 42 + (gg - 1 - 12); Brazil = ((444));";
     //char *code = "if x + 1 - 2 { let brazil = mentioned; } else { cuba = 21; }";
-    char *code = "fn main(x, y) { let x = 12; print x + y; return y-x; }";
+    char *code = "fn main(x, y) { let x = -12; print x + y; return -y-x; }";
     //char *code = "let x = fff(aa, 43-1+Brazil, (your_func(Mentioned)));";
     //char *code = "";
+    //char *code = "let x = -1;";
     //struct Node expected_node = {.node_type = ARITHMETIC,};
     
     // Tokenize 
@@ -149,7 +151,8 @@ void test_evaluator() {
     //char *code = "if x + 1 - 2 { let brazil = mentioned; } else { cuba = 21; }";
     //char *code = "fn main(x, y) { let x = 12; print x + y; return y-x; }";
     //char *code = "let x = fff(aa, 43-1+Brazil, (your_func(Mentioned)));";
-    char *code = "fn sum(a, b) { return a+b; } let x = 12+43; let y = sum(40, 60); print x*y+1;";
+    char *code = "fn sum(a, b) { if (1+1) {return a+b;} else {return 0;} } let x = 12+43; let y = sum(40, 60); print -x*y+1;";
+    //char *code = "let x = -1; print x;";
     //char *code = "fn sum(a, b) { return a+b; } let y = sum(4, 5); print y;";
     //struct Node expected_node = {.node_type = ARITHMETIC,};
     
@@ -169,10 +172,10 @@ void test_evaluator() {
 }
 
 int main() {
-    //test_tokenizer();
-    //test_parser();
-    //test_hash_table();
-    //test_stack();
+    test_tokenizer();
+    test_parser();
+    test_hash_table();
+    test_stack();
     test_evaluator();
     return 0;
 }

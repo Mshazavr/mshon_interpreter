@@ -37,6 +37,11 @@ void print_node(ASTNode *node, size_t indent_count) {
         printf("Node value: %s\n", node->value);
     }
 
+    if (node->prefix_operator) {
+        print_indent(indent_count);
+        printf("Prefix Operator: %s\n", TokeTypeNames[*node->prefix_operator]);
+    }
+
     if (node->operators) {
         print_indent(indent_count);
         printf("Node operators: [");
@@ -189,6 +194,12 @@ ASTNode parse_expression(ParserContext *context) {
     enum OperatorType *operators_buffer = malloc(10 * sizeof(enum OperatorType));
     size_t operators_length = 0;
     size_t operators_capacity = 10;
+    enum OperatorType *prefix_operator = NULL;
+    if (peek(context, MINUS)) {
+        prefix_operator = malloc(sizeof(enum OperatorType));
+        *prefix_operator = SUB_OP;
+        context->token_pos += 1;
+    }
 
     while(1) {
         // Find operands (and operators) until hitting a wall
@@ -216,6 +227,7 @@ ASTNode parse_expression(ParserContext *context) {
             for (size_t i = 0; i < children_length; ++i) cleanup_node(children_buffer+i);
             free(children_buffer);
             free(operators_buffer);
+            if (prefix_operator != NULL) free(prefix_operator); 
             return INVALID_NODE;
         }
         
@@ -233,7 +245,7 @@ ASTNode parse_expression(ParserContext *context) {
         if (peek(context, PLUS) || peek(context, MINUS) || peek(context, MULT) || peek(context, DIV)) {
             if (operators_capacity == operators_length) {
                 operators_capacity *= 2;
-                operators_buffer = realloc(operators_buffer, operators_capacity * sizeof(enum TokenType));
+                operators_buffer = realloc(operators_buffer, operators_capacity * sizeof(enum OperatorType));
             }
             if (peek(context, PLUS)) operators_buffer[operators_length++] = ADD_OP;
             else if (peek(context, MINUS)) operators_buffer[operators_length++] = SUB_OP;
@@ -248,10 +260,12 @@ ASTNode parse_expression(ParserContext *context) {
         for (size_t i = 0; i < children_length; ++i) cleanup_node(children_buffer+i);
         free(children_buffer);
         free(operators_buffer);
+        if (prefix_operator != NULL) free(prefix_operator);
         return INVALID_NODE;
     }
     else if (children_length == 1) {
         ASTNode result = children_buffer[0];
+        result.prefix_operator = prefix_operator;
         free(children_buffer);
         free(operators_buffer);
         return result;
@@ -259,7 +273,8 @@ ASTNode parse_expression(ParserContext *context) {
     else {
         ASTNode result = {
             .node_type = ARITHMETIC,
-            .operators = realloc(operators_buffer, operators_length * sizeof(enum TokenType)),
+            .operators = realloc(operators_buffer, operators_length * sizeof(enum OperatorType)),
+            .prefix_operator = prefix_operator,
             .children = realloc(children_buffer, children_length * sizeof(ASTNode)),
             .children_length = children_length
         };

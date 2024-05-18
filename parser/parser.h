@@ -51,6 +51,7 @@ struct ASTNode_s {
     // used for arithmetic expression operators
     // the length is children_length - 1
     enum OperatorType *operators; 
+    enum OperatorType *prefix_operator;
 
     struct ASTNode_s *children;
     size_t children_length;

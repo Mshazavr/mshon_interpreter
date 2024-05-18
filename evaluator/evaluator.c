@@ -101,9 +101,12 @@ void evaluate_statement_sequence(ASTNode const *node, EvaluatorContext *context)
 /////////////////////////////
 
 void evaluate_number(ASTNode const *node, EvaluatorContext *context) {
-    EvaluationResult result = {.number = char_to_int(node->value)};
+    int32_t result_number = char_to_int(node->value);
+    if (node->prefix_operator != NULL && *node->prefix_operator == SUB_OP) {
+        result_number *= -1;
+    }
     context->result_type = NUMBER_TYPE;
-    context->result = result;
+    context->result = (EvaluationResult){.number=result_number};
 }
 
 void evaluate_variable(ASTNode const *node, EvaluatorContext *context) {
@@ -115,9 +118,12 @@ void evaluate_variable(ASTNode const *node, EvaluatorContext *context) {
         return;
     }
 
-    EvaluationResult result = {.number = *(int32_t*)value};
+    int32_t result_number = *(int32_t*)value;
+    if (node->prefix_operator != NULL && *node->prefix_operator == SUB_OP) {
+        result_number *= -1;
+    }
     context->result_type = NUMBER_TYPE;
-    context->result = result;
+    context->result = (EvaluationResult){.number=result_number};
 }
 
 void evaluate_arithmetic(ASTNode const *node, EvaluatorContext *context) {
@@ -133,15 +139,18 @@ void evaluate_arithmetic(ASTNode const *node, EvaluatorContext *context) {
         child_evaluations[i] = context->result.number;
     }
 
-    EvaluationResult result = {.number = child_evaluations[0]};
+    int32_t result_number = child_evaluations[0];
+    if (node->prefix_operator != NULL && *node->prefix_operator == SUB_OP) {
+        result_number *= -1;
+    }
     for (size_t i = 1; i < node->children_length; ++i) {
-        if (node->operators[i-1] == ADD_OP) result.number += child_evaluations[i];
-        else if (node->operators[i-1] == SUB_OP) result.number -= child_evaluations[i];
-        else if (node->operators[i-1] == MULT_OP) result.number *= child_evaluations[i];
-        else if (node->operators[i-1] == DIV_OP) result.number /= child_evaluations[i];
+        if (node->operators[i-1] == ADD_OP) result_number += child_evaluations[i];
+        else if (node->operators[i-1] == SUB_OP) result_number -= child_evaluations[i];
+        else if (node->operators[i-1] == MULT_OP) result_number *= child_evaluations[i];
+        else if (node->operators[i-1] == DIV_OP) result_number /= child_evaluations[i];
     }
     context->result_type = NUMBER_TYPE;
-    context->result = result;
+    context->result = (EvaluationResult){.number=result_number};
 }
 
 void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
@@ -190,6 +199,9 @@ void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
     }
 
     evaluate_statement_sequence(function_node->children+0, context);
+    if (node->prefix_operator != NULL && *node->prefix_operator == SUB_OP) {
+        context->result.number *= -1;
+    }
 }
 
 void evaluate_expression_node(ASTNode const *node, EvaluatorContext *context) {
@@ -212,6 +224,7 @@ void evaluate_declaration(ASTNode const *node, EvaluatorContext *context) {
     if (hash_table_get(current_frame, name) != NULL) {
         context->error_code = VARIABLE_EXISTS;
         context->error_message = variable_exists_message(name);
+        context->result = (EvaluationResult){.number=0};
         return;
     }
 
@@ -221,6 +234,7 @@ void evaluate_declaration(ASTNode const *node, EvaluatorContext *context) {
     memcpy(result, &context->result.number, sizeof(int32_t));
     char error = hash_table_set(current_frame, name, &result);
     if (error) context->error_code = INTERNAL;
+    context->result = (EvaluationResult){.number=0};
 }
 
 void evaluate_assignment(ASTNode const *node, EvaluatorContext *context) { 
@@ -230,6 +244,7 @@ void evaluate_assignment(ASTNode const *node, EvaluatorContext *context) {
     if (hash_table_get(current_frame, name) == NULL) {
         context->error_code = UNDECLARED_IDENTIFIER;
         context->error_message = undefined_identifier_message(name);
+        context->result = (EvaluationResult){.number=0};
         return;
     }
 
@@ -239,6 +254,7 @@ void evaluate_assignment(ASTNode const *node, EvaluatorContext *context) {
     memcpy(result, &context->result.number, sizeof(int32_t));
     char error = hash_table_set(current_frame, name, &result);
     if (error) context->error_code = INTERNAL;
+    context->result = (EvaluationResult){.number=0};
 }
 
 void evaluate_return(ASTNode const *node, EvaluatorContext *context) {
@@ -249,6 +265,7 @@ void evaluate_print(ASTNode const *node, EvaluatorContext *context) {
     evaluate_expression_node(node->children+0, context);
     if (context->error_code) return;
     printf("Side Effect: %d\n", context->result.number);
+    context->result = (EvaluationResult){.number=0};
 }
 
 void evaluate_if_else(ASTNode const *node, EvaluatorContext *context) {
@@ -270,11 +287,13 @@ void evaluate_function(ASTNode const *node, EvaluatorContext *context) {
     if (hash_table_get(current_frame, name) != NULL) {
         context->error_code = VARIABLE_EXISTS;
         context->error_message = variable_exists_message(name);
+        context->result = (EvaluationResult){.number=0};
         return;
     }
 
     char error = hash_table_set(current_frame, name, &node);
     if (error) context->error_code = INTERNAL;
+    context->result = (EvaluationResult){.number=0};
 }
 
 void evaluate_statement_sequence(ASTNode const *node, EvaluatorContext *context) {
