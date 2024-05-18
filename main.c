@@ -151,7 +151,7 @@ void test_evaluator() {
     //char *code = "if x + 1 - 2 { let brazil = mentioned; } else { cuba = 21; }";
     //char *code = "fn main(x, y) { let x = 12; print x + y; return y-x; }";
     //char *code = "let x = fff(aa, 43-1+Brazil, (your_func(Mentioned)));";
-    char *code = "&fn sum(a, b) { if (1+1) {return a+b;} else {return 0;} } let x = 12+43; let y = sum(40, 60); print -x*y+1;";
+    char *code = "fn sum(a, b) { if (1+1) {return a+b;} else {return 0;} } let x = 12+43; let y = sum(40, 60); print -x*y+1;";
     //char *code = "let x = -1; print x;";
     //char *code = "fn sum(a, b) { return a+b; } let y = sum(4, 5); print y;";
     //struct Node expected_node = {.node_type = ARITHMETIC,};
@@ -166,6 +166,10 @@ void test_evaluator() {
 
     // Parse
     ASTNode root = parse_ast(tokenizer_state.parsed_tokens, tokenizer_state.parsed_tokens_length);
+    if (root.node_type == INVALID) {
+        printf("Syntax error\n");
+        return;
+    }
 
     // Evaluate 
     EvaluatorContext context = evaluate(&root);
