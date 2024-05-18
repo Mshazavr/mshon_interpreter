@@ -3,7 +3,7 @@
 
 #include <stdint.h> 
 #include <stdlib.h>
-#include "../tokenizer/tokenizer.h"
+#include "tokenizer.h"
 
 
 // Used for logging 

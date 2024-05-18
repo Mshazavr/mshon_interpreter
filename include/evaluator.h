@@ -3,9 +3,9 @@
 
 
 #include <stdlib.h>
-#include "../stack/stack.h"
-#include "../hash_table/hash_table.h"
-#include "../parser/parser.h"
+#include "stack.h"
+#include "hash_table.h"
+#include "parser.h"
 
 #define _INITIAL_STACK_FRAMES_CAPACITY 64
 #define _INITIAL_IDENTIFIER_TABLE_CAPACITY 32

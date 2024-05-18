@@ -1,28 +1,36 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -Wno-missing-field-initializers
+CFLAGS = -I./include -Wall -Wextra -g -Wno-missing-field-initializers
+VPATH = include
 
-OBJ = main.o tokenizer/tokenizer.o parser/parser.o hash_table/hash_table.o stack/stack.o evaluator/evaluator.o
+OBJ = build/main.o build/tokenizer.o build/parser.o build/hash_table.o build/stack.o build/evaluator.o
+OBJ_T = build/test.o build/tokenizer.o build/parser.o build/hash_table.o build/stack.o build/evaluator.o
 
 mshon: $(OBJ)
-	$(CC) $(CFLAGS) -o mshon $(OBJ)
+	$(CC) $(CFLAGS) -o bin/mshon $(OBJ)
 
-main.o: main.c tokenizer/tokenizer.h parser/parser.h
-	$(CC) $(CFLAGS) -c main.c
+test: $(OBJ_T)
+	$(CC) $(CFLAGS) -o bin/test $(OBJ_T)
 
-parser/parser.o: parser/parser.c parser/parser.h tokenizer/tokenizer.h
-	$(CC) $(CFLAGS) -c parser/parser.c -o parser/parser.o
+build/main.o: src/main.c include/tokenizer.h include/parser.h include/evaluator.h
+	$(CC) $(CFLAGS) -c src/main.c -o build/main.o
 
-tokenizer/tokenizer.o: tokenizer/tokenizer.c tokenizer/tokenizer.h
-	$(CC) $(CFLAGS) -c tokenizer/tokenizer.c -o tokenizer/tokenizer.o
+build/test.o: tests/runner.c include/tokenizer.h include/parser.h include/evaluator.h
+	$(CC) $(CFLAGS) -c tests/runner.c -o build/test.o
 
-hash_table/hash_table.o: hash_table/hash_table.c hash_table/hash_table.h 
-	$(CC) $(CFLAGS) -c hash_table/hash_table.c -o hash_table/hash_table.o 
+build/parser.o: src/parser.c include/parser.h include/tokenizer.h
+	$(CC) $(CFLAGS) -c src/parser.c -o build/parser.o
 
-stack/stack.o: stack/stack.c stack/stack.h 
-	$(CC) $(CFLAGS) -c stack/stack.c -o stack/stack.o 
+build/tokenizer.o: src/tokenizer.c include/tokenizer.h
+	$(CC) $(CFLAGS) -c src/tokenizer.c -o build/tokenizer.o
 
-evaluator/evaluator.o: evaluator/evaluator.c evaluator/evaluator.h 
-	$(CC) $(CFLAGS) -c evaluator/evaluator.c -o evaluator/evaluator.o 
+build/hash_table.o: src/hash_table.c include/hash_table.h 
+	$(CC) $(CFLAGS) -c src/hash_table.c -o build/hash_table.o 
+
+build/stack.o: src/stack.c include/stack.h 
+	$(CC) $(CFLAGS) -c src/stack.c -o build/stack.o 
+
+build/evaluator.o: src/evaluator.c include/evaluator.h 
+	$(CC) $(CFLAGS) -c src/evaluator.c -o build/evaluator.o 
 
 clean:
-	rm -f $(OBJ) mshon
+	rm -f $(OBJ) $(OBJ_T) bin/mshon bin/test

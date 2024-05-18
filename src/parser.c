@@ -1,9 +1,10 @@
-#include "parser.h"
-#include "../tokenizer/tokenizer.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include "parser.h"
+#include "tokenizer.h"
 
 
 // Used for logging

@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../stack/stack.h"
-#include "../hash_table/hash_table.h"
-#include "../parser/parser.h"
+#include "stack.h"
+#include "hash_table.h"
+#include "parser.h"
 
 char *undefined_identifier_message(char const *identifier) {
     char *error_message = malloc(25+strlen(identifier)+1);

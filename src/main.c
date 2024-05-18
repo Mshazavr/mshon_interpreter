@@ -1,12 +1,12 @@
 #include <stdio.h>
-#include "tokenizer/tokenizer.h"
-#include "parser/parser.h"
 #include <string.h>
 #include <assert.h>
 #include <stdint.h>
-#include "hash_table/hash_table.h"
-#include "stack/stack.h"
-#include "evaluator/evaluator.h"
+#include "tokenizer.h"
+#include "parser.h"
+#include "hash_table.h"
+#include "stack.h"
+#include "evaluator.h"
 
 void test_tokenizer() {
     char *code = (
