@@ -361,7 +361,6 @@ EvaluatorContext evaluate(ASTNode *node) {
 /*
 TODO 
 - string type support (currently only supports ints). Also maybe floats in future etc...
-- negative number support
 - synthetic stress test (to test performance improvement after using bump allocation in certain places like the parser)
 - better way to handle hash table storage (tagged union instead of a generic pointer potentially)
 */

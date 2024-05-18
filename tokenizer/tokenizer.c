@@ -66,13 +66,13 @@ char is_alphanumeric(char c) {
     return is_alphabetical(c) || is_numeric(c);
 }
 
-void parse_next_token(TokenizerState *tokenizer_state) {
+char parse_next_token(TokenizerState *tokenizer_state) {
     while(is_whitespace(tokenizer_state->code[0])) {
         ++tokenizer_state->code;
         continue;
     }
     
-    if (tokenizer_state->code[0] == '\0') return; 
+    if (tokenizer_state->code[0] == '\0') return 0; 
 
     Token next_token = {.token_type = IDENTIFIER, .token_value = NULL};
 
@@ -108,6 +108,9 @@ void parse_next_token(TokenizerState *tokenizer_state) {
             if (is_alphabetical(tokenizer_state->code[0])) has_alphabetical = 1;
             ++tokenizer_state->code;
         }
+        if (tokenizer_state->code == code_start) {
+            return 1;
+        }
         
         next_token.token_value = malloc(tokenizer_state->code - code_start + 1);
         strncpy(next_token.token_value, code_start, tokenizer_state->code - code_start);
@@ -133,10 +136,13 @@ void parse_next_token(TokenizerState *tokenizer_state) {
 
     tokenizer_state_adjust_capacity(tokenizer_state);
     tokenizer_state->parsed_tokens[tokenizer_state->parsed_tokens_length++] = next_token;
+    return 0;
 }
 
-void tokenize(TokenizerState *tokenizer_state) {
+char tokenize(TokenizerState *tokenizer_state) {
     while (tokenizer_state->code[0] != '\0') {
-        parse_next_token(tokenizer_state);
+        char error = parse_next_token(tokenizer_state);
+        if (error) return error;
     }
+    return 0;
 }

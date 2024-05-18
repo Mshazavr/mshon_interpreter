@@ -45,7 +45,7 @@ typedef struct {
 } TokenizerState;
 
 TokenizerState init_tokenizer_state(char *code);
-void tokenize(TokenizerState *tokenizer_state);
+char tokenize(TokenizerState *tokenizer_state);
 
 #endif
 
