@@ -1,15 +1,15 @@
 fn fib(i) {
-    if i - 0 {
-        if i - 1 {
-            return fib(i-1)+fib(i-2);
+    imagine i - 0 {
+        imagine i - 1 {
+            checkit fib(i-1)+fib(i-2);
         }
-        else {
-            return 1;
+        bummer {
+            checkit 1;
         }
     }
-    else {
-        return 1;
+    bummer {
+        checkit 1;
     }
 }
 
-print fib(5);
+vomit fib(5);

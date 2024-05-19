@@ -6,30 +6,30 @@ Mshon is toy interpreted language written in C. Here is an example code in Mshon
 
 ```
 fn fib(i) {
-    if i - 0 {
-        if i - 1 {
-            return fib(i-1)+fib(i-2);
+    imagine i - 0 {
+        imagine i - 1 {
+            checkit fib(i-1)+fib(i-2);
         }
-        else {
-            return 1;
+        bummer {
+            checkit 1;
         }
     }
-    else {
-        return 1;
+    bummer {
+        checkit 1;
     }
 }
 
-print fib(5);
+vomit fib(5);
 
 fn sum(a, b) { 
-    return a + b;
+    checkit a + b;
 } 
 
-let x = 6;
-let y = x;
+suppose x = 6;
+suppose y = x;
 y = y + 1;
 
-print -1 * (fib(6) + fib(7));
+vomit -1 * (fib(6) + fib(7));
 ```
 
 Output: 

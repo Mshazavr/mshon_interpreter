@@ -1,9 +1,9 @@
-let xd = -12; 
-let y = 14; 
+suppose xd = -12; 
+suppose y = 14; 
 fn func () {
-    if xd - y - 2 {
-        print xd + y;
+    imagine xd - y - 2 {
+        vomit xd + y;
     }
 }
 
-let x = func();
+suppose x = func();

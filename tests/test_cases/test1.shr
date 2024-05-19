@@ -1,14 +1,14 @@
 fn sum(a, b) { 
-    if 1+1 {
-        return a+b;
+    imagine 1+1 {
+        checkit a+b;
     } 
-    else {
-        return 0;
+    bummer {
+        checkit 0;
     }
 } 
 
-let x = 12+43; 
+suppose x = 12+43; 
 
-let y = sum(40, 60); 
+suppose y = sum(40, 60); 
 
-print -x*y+1;
+vomit -x*y+1;

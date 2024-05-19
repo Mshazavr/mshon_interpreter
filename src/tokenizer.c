@@ -146,12 +146,12 @@ void parse_next_token(TokenizerState *tokenizer_state) {
         next_token.token_value[tokenizer_state->code - code_start] = '\0';
 
         if (!has_alphabetical) next_token.token_type = NUMERIC_LITERAL;
-        else if (strcmp(next_token.token_value, "if") == 0) next_token.token_type = IF;
-        else if (strcmp(next_token.token_value, "else") == 0) next_token.token_type = ELSE;
+        else if (strcmp(next_token.token_value, "imagine") == 0) next_token.token_type = IF;
+        else if (strcmp(next_token.token_value, "bummer") == 0) next_token.token_type = ELSE;
         else if (strcmp(next_token.token_value, "fn") == 0) next_token.token_type = FN;
-        else if (strcmp(next_token.token_value, "let") == 0) next_token.token_type = LET;
-        else if (strcmp(next_token.token_value, "return") == 0) next_token.token_type = RETURN;
-        else if (strcmp(next_token.token_value, "print") == 0) next_token.token_type = PRINT;
+        else if (strcmp(next_token.token_value, "suppose") == 0) next_token.token_type = LET;
+        else if (strcmp(next_token.token_value, "checkit") == 0) next_token.token_type = RETURN;
+        else if (strcmp(next_token.token_value, "vomit") == 0) next_token.token_type = PRINT;
 
         //no need to save the token value for keywords 
         if (next_token.token_type != IDENTIFIER && next_token.token_type != NUMERIC_LITERAL) {
