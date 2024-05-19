@@ -268,7 +268,9 @@ void evaluate_return(ASTNode const *node, EvaluatorContext *context) {
 void evaluate_print(ASTNode const *node, EvaluatorContext *context) {
     evaluate_expression_node(node->children+0, context);
     if (context->error_code) return;
-    printf("Side Effect: %d\n", context->result.number);
+
+    stack_push(&context->side_effects, &context->result.number);
+
     context->result = (EvaluationResult){.number=0};
 }
 
@@ -352,9 +354,12 @@ EvaluatorContext evaluate(ASTNode *node) {
         return context;
     }
 
+    Stack side_effects = init_stack(1024, sizeof(int32_t));
+
     EvaluatorContext context = {
         .stack_frames = stack_frames,
         .error_code = PASS,
+        .side_effects = side_effects
     };
 
     evaluate_statement_sequence(node, &context);

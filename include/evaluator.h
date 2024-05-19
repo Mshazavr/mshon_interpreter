@@ -37,6 +37,7 @@ typedef struct {
     char *error_message;
     EvaluationResultType result_type;
     EvaluationResult result;
+    Stack side_effects; // only type of side effect is int32_t currently 
 
 } EvaluatorContext;
 

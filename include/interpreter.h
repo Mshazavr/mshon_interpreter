@@ -1,4 +1,6 @@
-char interpret(char const *code, char **error_message);
+#include "evaluator.h"
+
+char interpret(char const *code, char **error_message, EvaluatorContext *context);
 
 /*
 TODOs

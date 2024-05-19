@@ -5,7 +5,7 @@
 #include "evaluator.h"
 
 
-char interpret(char const *code, char **error_message) {
+char interpret(char const *code, char **error_message, EvaluatorContext *context) {
     // Tokenize 
     TokenizerState tokenizer_state = init_tokenizer_state(code);
     char error = tokenize(&tokenizer_state);
@@ -36,9 +36,9 @@ char interpret(char const *code, char **error_message) {
     }
 
     // Evaluate 
-    EvaluatorContext context = evaluate(&root);
-    if (context.error_code) {
-        *error_message = strdup(context.error_message);
+    *context = evaluate(&root);
+    if (context->error_code) {
+        *error_message = strdup(context->error_message);
     }
 
     // free memory 
@@ -48,5 +48,5 @@ char interpret(char const *code, char **error_message) {
     free(tokens);
     delete_node(&root);
     
-    return context.error_code;
+    return context->error_code;
 }

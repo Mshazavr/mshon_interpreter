@@ -4,8 +4,10 @@
 #include <stdint.h>
 #include <dirent.h>
 #include <libgen.h>
+#include <assert.h>
 
 #include "interpreter.h"
+#include "evaluator.h"
 
 #define MAX_FILE_SIZE 1048576
 
@@ -17,54 +19,79 @@ char *get_directory(const char *file_path) {
     return dir_path_copy;
 }
 
-void print_test_passed() {
-
-}
-
-
-void run_test(size_t test_index, char const *test_name, char const *code) {
-    char *error_message;
-    char exit_code = interpret(code, &error_message);
-    if (exit_code) {
-        printf("error message: %s\n", error_message);
-    }
-    printf("Exit code: %d\n", exit_code);
-}
-
-
-int main() {
+char *get_test_path(const char *test_name) {
     char *source_dir = get_directory(__FILE__);
     char test_cases_dir_path[300];
     snprintf(test_cases_dir_path, sizeof(test_cases_dir_path), "%s/test_cases", source_dir);
     free(source_dir);
+ 
+    int length = snprintf(NULL, 0, "%s/%s.shr", test_cases_dir_path, test_name);
+    char *full_path = malloc(length + 1);  // Allocate memory for the full path
+    snprintf(full_path, length + 1, "%s/%s.shr", test_cases_dir_path, test_name);
 
-    DIR *test_cases_dir;
-    struct dirent *dir;
-    test_cases_dir = opendir(test_cases_dir_path);
+    return full_path;
+}
 
-    size_t test_index = 0;
-    if (test_cases_dir) {
-        while((dir = readdir(test_cases_dir)) != NULL) {
-            if (strstr(dir->d_name, ".shr") != NULL) {
-                char filepath[600];
-                snprintf(filepath, sizeof(filepath), "%s/%s", test_cases_dir_path, dir->d_name);
+typedef struct {
+    size_t test_index;
+    const char *test_name;
+    int32_t *side_effects; 
+} TestCase;
 
-                FILE *file = fopen(filepath, "r");
-                if (file) {
-                    char *code = malloc(MAX_FILE_SIZE);
-                    if (code) {
-                        size_t bytes_read = fread(code, 1, MAX_FILE_SIZE - 1, file);
-                        code[bytes_read] = '\0';
+TestCase TEST_CASES[3] = {
+    {.test_index=1, .test_name="test1", .side_effects=(int32_t[]){-5499} },
+    {.test_index=2, .test_name="test2", .side_effects=(int32_t[]){2} },
+    {.test_index=3, .test_name="test3", .side_effects=(int32_t[]){8} },
+};
 
-                        run_test(test_index, dir->d_name, code);               
-
-                        free(code);
-                    }
-                    fclose(file);
-                }
-            }
-        }
-        closedir(test_cases_dir);
+void print_test_verdict(TestCase *test_case, char passed) {
+    printf(">>> Test id: %ld - Test name: %s -------- ", test_case->test_index, test_case->test_name);
+    if (passed) {
+        printf("\033[32mPASSED\033[0m\n");
     }
-    return 0;
+    else {
+        printf("\033[31mFAILED\033[0m\n");
+    }
+}
+
+char *get_code_from_test_case(TestCase *test_case) {
+    char *filepath = get_test_path(test_case->test_name);
+    FILE *file = fopen(filepath, "r");
+
+    char *code = malloc(MAX_FILE_SIZE);
+    size_t bytes_read = fread(code, 1, MAX_FILE_SIZE - 1, file);
+    code[bytes_read] = '\0';       
+
+    fclose(file);
+    free(filepath);
+    return code;
+}
+
+void run_test_case(TestCase *test_case) {
+    char *code = get_code_from_test_case(test_case);
+    char *error_message;
+    EvaluatorContext context;
+
+    char exit_code = interpret(code, &error_message, &context);
+
+    if (exit_code) {
+        printf("error message: %s\n", error_message);
+    }
+
+    char passed = 1;
+    for (size_t i=0;i<context.side_effects.length; ++i) {
+        int32_t output_number = *(int32_t*)stack_at(&context.side_effects, context.side_effects.length-i-1);
+        if (output_number != test_case->side_effects[i]) {
+            passed = 0;
+            break;
+        }
+    }
+    print_test_verdict(test_case, passed);
+}
+
+
+int main() {
+    for (char i=0; i < 3; ++i) {
+        run_test_case(TEST_CASES+i);
+    }
 }
