@@ -270,6 +270,9 @@ void evaluate_print(ASTNode const *node, EvaluatorContext *context) {
     if (context->error_code) return;
 
     stack_push(&context->side_effects, &context->result.number);
+    if (!context->dry_run) {
+        printf("%d\n", context->result.number);
+    }
 
     context->result = (EvaluationResult){.number=0};
 }
@@ -317,11 +320,12 @@ void evaluate_statement_sequence(ASTNode const *node, EvaluatorContext *context)
     }
 }
 
-EvaluatorContext evaluate(ASTNode *node) {
+EvaluatorContext evaluate(ASTNode *node, char dry_run) {
     if (node->node_type != STMT_SEQUENCE) { 
         EvaluatorContext context = {
             .error_code = INTERNAL,
-            .error_message = "Internal Error: Invalid AST node type received"
+            .error_message = "Internal Error: Invalid AST node type received",
+            .dry_run = dry_run
         };
         return context;
     }
@@ -330,7 +334,8 @@ EvaluatorContext evaluate(ASTNode *node) {
     if (stack_frames.buffer == NULL) {
         EvaluatorContext context = {
             .error_code = INTERNAL,
-            .error_message = "Internal Error: Could not allocate memory for stack frames"
+            .error_message = "Internal Error: Could not allocate memory for stack frames",
+            .dry_run = dry_run
         };
         return context;
     }
@@ -340,7 +345,8 @@ EvaluatorContext evaluate(ASTNode *node) {
     if (frame.rows == NULL || main_frame == NULL) {
         EvaluatorContext context = {
             .error_code = INTERNAL,
-            .error_message = "Internal Error: Could not allocate memory for main frame"
+            .error_message = "Internal Error: Could not allocate memory for main frame",
+            .dry_run = dry_run
         };
         return context;
     }
@@ -349,7 +355,8 @@ EvaluatorContext evaluate(ASTNode *node) {
     if (!stack_push(&stack_frames, main_frame)) {
         EvaluatorContext context = {
             .error_code = INTERNAL,
-            .error_message = "Internal Error: Could not allocate memory for main frame"
+            .error_message = "Internal Error: Could not allocate memory for main frame",
+            .dry_run = dry_run
         };
         return context;
     }
@@ -359,7 +366,8 @@ EvaluatorContext evaluate(ASTNode *node) {
     EvaluatorContext context = {
         .stack_frames = stack_frames,
         .error_code = PASS,
-        .side_effects = side_effects
+        .side_effects = side_effects,
+        .dry_run = dry_run
     };
 
     evaluate_statement_sequence(node, &context);

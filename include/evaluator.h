@@ -38,9 +38,10 @@ typedef struct {
     EvaluationResultType result_type;
     EvaluationResult result;
     Stack side_effects; // only type of side effect is int32_t currently 
+    char dry_run;
 
 } EvaluatorContext;
 
-EvaluatorContext evaluate(ASTNode *node);
+EvaluatorContext evaluate(ASTNode *node, char dry_run);
 
 #endif

@@ -5,7 +5,7 @@
 #include "evaluator.h"
 
 
-char interpret(char const *code, char **error_message, EvaluatorContext *context) {
+char interpret(char const *code, char **error_message, EvaluatorContext *context, char dry_run) {
     // Tokenize 
     TokenizerState tokenizer_state = init_tokenizer_state(code);
     char error = tokenize(&tokenizer_state);
@@ -36,7 +36,7 @@ char interpret(char const *code, char **error_message, EvaluatorContext *context
     }
 
     // Evaluate 
-    *context = evaluate(&root);
+    *context = evaluate(&root, dry_run);
     if (context->error_code) {
         *error_message = strdup(context->error_message);
     }

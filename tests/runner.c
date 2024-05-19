@@ -72,7 +72,7 @@ void run_test_case(TestCase *test_case) {
     char *error_message;
     EvaluatorContext context;
 
-    char exit_code = interpret(code, &error_message, &context);
+    char exit_code = interpret(code, &error_message, &context, 1);
 
     if (exit_code) {
         printf("error message: %s\n", error_message);
