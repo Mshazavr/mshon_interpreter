@@ -26,7 +26,8 @@ fn sum(a, b) {
 } 
 
 let x = 6;
-let y = x + 1;
+let y = x;
+y = y + 1;
 
 print -1 * (fib(6) + fib(7));
 ```
