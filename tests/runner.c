@@ -38,10 +38,11 @@ typedef struct {
     int32_t *side_effects; 
 } TestCase;
 
-TestCase TEST_CASES[3] = {
+TestCase TEST_CASES[4] = {
     {.test_index=1, .test_name="test1", .side_effects=(int32_t[]){-5499} },
     {.test_index=2, .test_name="test2", .side_effects=(int32_t[]){2} },
     {.test_index=3, .test_name="test3", .side_effects=(int32_t[]){8} },
+    {.test_index=4, .test_name="test4", .side_effects=(int32_t[]){8, -34} }
 };
 
 void print_test_verdict(TestCase *test_case, char passed) {
@@ -91,7 +92,7 @@ void run_test_case(TestCase *test_case) {
 
 
 int main() {
-    for (char i=0; i < 3; ++i) {
+    for (char i=0; i < 4; ++i) {
         run_test_case(TEST_CASES+i);
     }
 }
