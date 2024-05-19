@@ -38,7 +38,8 @@ typedef struct {
     int32_t *side_effects; 
 } TestCase;
 
-TestCase TEST_CASES[4] = {
+TestCase TEST_CASES[5] = {
+    {.test_index=0, .test_name="test0", .side_effects=(int32_t[]){1} },
     {.test_index=1, .test_name="test1", .side_effects=(int32_t[]){-5499} },
     {.test_index=2, .test_name="test2", .side_effects=(int32_t[]){2} },
     {.test_index=3, .test_name="test3", .side_effects=(int32_t[]){8} },
@@ -76,7 +77,9 @@ void run_test_case(TestCase *test_case) {
     char exit_code = interpret(code, &error_message, &context, 1);
 
     if (exit_code) {
+        print_test_verdict(test_case, 0);
         printf("error message: %s\n", error_message);
+        return;
     }
 
     char passed = 1;

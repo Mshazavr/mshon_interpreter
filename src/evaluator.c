@@ -14,6 +14,13 @@ char *undefined_identifier_message(char const *identifier) {
     return error_message;
 }
 
+char *callable_identifier_not_called_message(char const *identifier) {
+    char *error_message = malloc(54+strlen(identifier)+1);
+    if (error_message != NULL)
+        sprintf(error_message, "Callable identifier needs to be called in expression: %s", identifier);
+    return error_message;
+}
+
 char *not_callable_message(char const *identifier) {
     char *error_message = malloc(25+strlen(identifier)+1);
     if (error_message != NULL)
@@ -43,12 +50,13 @@ int32_t char_to_int(char const *num) {
     return result;
 }
 
-char const *search_identifier_value(EvaluatorContext *context, char const *identifer) {
+const StackFrameEntry *search_identifier_value(EvaluatorContext *context, char const *identifer) {
     for (size_t i=0; i < context->stack_frames.length; ++i) {
         HashTable const *frame = stack_at(&context->stack_frames, i);
-        char * const *value = hash_table_get(frame, identifer);
-        if (value == NULL) continue;
-        return *value;
+        const StackFrameEntry * const entry = hash_table_get(frame, identifer);
+
+        if (entry == NULL) continue;
+        return entry;
     }
     return NULL;
 }
@@ -59,15 +67,16 @@ char allocate_stack_frame(
     uint32_t *arg_values, 
     size_t args_length
 ) { 
-    HashTable frame = init_hash_table(_INITIAL_IDENTIFIER_TABLE_CAPACITY, sizeof(char*));
+    HashTable frame = init_hash_table(_INITIAL_IDENTIFIER_TABLE_CAPACITY, sizeof(StackFrameEntry));
     HashTable *new_frame = malloc(sizeof(HashTable));
     if (frame.rows == NULL || new_frame == NULL) return 0;
     memcpy(new_frame, &frame, sizeof(HashTable));
 
     for (size_t i=0; i < args_length; ++i) {
-        uint32_t *arg = malloc(4);
-        *arg = arg_values[i];
-        char error = hash_table_set(new_frame, arg_names[i], &arg);
+        StackFrameEntry entry = {.type=INT32_T_ENTRY, .value.number=arg_values[i]};
+
+        char error = hash_table_set(new_frame, arg_names[i], &entry);
+
         if (error) {
             clean_hash_table(new_frame);
             free(new_frame);
@@ -107,24 +116,30 @@ void evaluate_number(ASTNode const *node, EvaluatorContext *context) {
         result_number *= -1;
     }
     context->result_type = NUMBER_TYPE;
-    context->result = (EvaluationResult){.number=result_number};
+    context->result.number = result_number;
 }
 
 void evaluate_variable(ASTNode const *node, EvaluatorContext *context) {
-    char const *value = search_identifier_value(context, node->value);
+    const StackFrameEntry * const entry = search_identifier_value(context, node->value);
 
-    if (value == NULL) {
+    if (entry == NULL) {
         context->error_code = UNDECLARED_IDENTIFIER;
         context->error_message = undefined_identifier_message(node->value);
         return;
     }
 
-    int32_t result_number = *(int32_t*)value;
+    if (entry->type == ASTNODE_POINTER_ENTRY) {
+        context->error_code = CALLABLE_IDENTIFIER_NOT_CALLED;
+        context->error_message = callable_identifier_not_called_message(node->value);
+        return;
+    }
+
+    int32_t result_number = entry->value.number;
     if (node->prefix_operator != NULL && *node->prefix_operator == SUB_OP) {
         result_number *= -1;
     }
     context->result_type = NUMBER_TYPE;
-    context->result = (EvaluationResult){.number=result_number};
+    context->result.number = result_number;
 }
 
 void evaluate_arithmetic(ASTNode const *node, EvaluatorContext *context) {
@@ -151,27 +166,25 @@ void evaluate_arithmetic(ASTNode const *node, EvaluatorContext *context) {
         else if (node->operators[i-1] == DIV_OP) result_number /= child_evaluations[i];
     }
     context->result_type = NUMBER_TYPE;
-    context->result = (EvaluationResult){.number=result_number};
+    context->result.number = result_number;
 }
 
 void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
-    ASTNode *function_node = (ASTNode *)search_identifier_value(context, node->value);
-    // TODO: fix the bug - hash table values should point to a tagged union of int34_t or ASTNode*
-    //       int pointer to ASTNode pointer is undefined behavior.
+    const StackFrameEntry * const entry = search_identifier_value(context, node->value);
 
-    if (function_node == NULL) {
+    if (entry == NULL) {
         context->error_code = UNDECLARED_IDENTIFIER;
         context->error_message = undefined_identifier_message(node->value);
         return;
     }
 
-    if (function_node->node_type != FUNCTION) {
+    if (entry->type != ASTNODE_POINTER_ENTRY) {
         context->error_code = NOT_CALLABLE,
         context->error_message = not_callable_message(node->value);
         return;
     }
 
-    if (node->children_length != function_node->args_length) {
+    if (node->children_length != entry->value.function_node->args_length) {
         context->error_code = UNEXPECTED_ARGUMENTS;
         context->error_message = unexpected_arguments_message(node->value);
         return;
@@ -191,9 +204,9 @@ void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
 
     char error = allocate_stack_frame(
         context,
-        function_node->args, 
+        entry->value.function_node->args, 
         arg_values, 
-        function_node->args_length
+        entry->value.function_node->args_length
     );
     
     if(error) {
@@ -201,7 +214,7 @@ void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
         return;
     }
 
-    evaluate_statement_sequence(function_node->children+0, context);
+    evaluate_statement_sequence(entry->value.function_node->children+0, context);
     
     stack_pop(&context->stack_frames);
     
@@ -230,17 +243,16 @@ void evaluate_declaration(ASTNode const *node, EvaluatorContext *context) {
     if (hash_table_get(current_frame, name) != NULL) {
         context->error_code = VARIABLE_EXISTS;
         context->error_message = variable_exists_message(name);
-        context->result = (EvaluationResult){.number=0};
+        context->result.number = 0;
         return;
     }
 
     evaluate_expression_node(node->children+1, context);
 
-    int32_t *result = malloc(sizeof(int32_t));
-    memcpy(result, &context->result.number, sizeof(int32_t));
-    char error = hash_table_set(current_frame, name, &result);
+    StackFrameEntry entry = {.type=INT32_T_ENTRY, .value.number=context->result.number};
+    char error = hash_table_set(current_frame, name, &entry);
     if (error) context->error_code = INTERNAL;
-    context->result = (EvaluationResult){.number=0};
+    context->result.number = 0;
 }
 
 void evaluate_assignment(ASTNode const *node, EvaluatorContext *context) { 
@@ -250,17 +262,16 @@ void evaluate_assignment(ASTNode const *node, EvaluatorContext *context) {
     if (hash_table_get(current_frame, name) == NULL) {
         context->error_code = UNDECLARED_IDENTIFIER;
         context->error_message = undefined_identifier_message(name);
-        context->result = (EvaluationResult){.number=0};
+        context->result.number = 0;
         return;
     }
 
     evaluate_expression_node(node->children+1, context);
 
-    int32_t *result = malloc(sizeof(int32_t));
-    memcpy(result, &context->result.number, sizeof(int32_t));
-    char error = hash_table_set(current_frame, name, &result);
+    StackFrameEntry entry = {.type=INT32_T_ENTRY, .value.number=context->result.number};
+    char error = hash_table_set(current_frame, name, &entry);
     if (error) context->error_code = INTERNAL;
-    context->result = (EvaluationResult){.number=0};
+    context->result.number = 0;
 }
 
 void evaluate_return(ASTNode const *node, EvaluatorContext *context) {
@@ -276,7 +287,7 @@ void evaluate_print(ASTNode const *node, EvaluatorContext *context) {
         printf("%d\n", context->result.number);
     }
 
-    context->result = (EvaluationResult){.number=0};
+    context->result.number = 0;
 }
 
 void evaluate_if_else(ASTNode const *node, EvaluatorContext *context) {
@@ -298,13 +309,14 @@ void evaluate_function(ASTNode const *node, EvaluatorContext *context) {
     if (hash_table_get(current_frame, name) != NULL) {
         context->error_code = VARIABLE_EXISTS;
         context->error_message = variable_exists_message(name);
-        context->result = (EvaluationResult){.number=0};
+        context->result.number = 0;
         return;
     }
 
-    char error = hash_table_set(current_frame, name, &node);
+    StackFrameEntry entry = {.type=ASTNODE_POINTER_ENTRY, .value.function_node=node};
+    char error = hash_table_set(current_frame, name, &entry);
     if (error) context->error_code = INTERNAL;
-    context->result = (EvaluationResult){.number=0};
+    context->result.number = 0;
 }
 
 void evaluate_statement_sequence(ASTNode const *node, EvaluatorContext *context) {
@@ -342,7 +354,7 @@ EvaluatorContext evaluate(ASTNode *node, char dry_run) {
         return context;
     }
     
-    HashTable frame = init_hash_table(_INITIAL_IDENTIFIER_TABLE_CAPACITY, sizeof(char*));
+    HashTable frame = init_hash_table(_INITIAL_IDENTIFIER_TABLE_CAPACITY, sizeof(StackFrameEntry));
     HashTable *main_frame = malloc(sizeof(HashTable));
     if (frame.rows == NULL || main_frame == NULL) {
         EvaluatorContext context = {
@@ -381,5 +393,4 @@ EvaluatorContext evaluate(ASTNode *node, char dry_run) {
 TODO 
 - string type support (currently only supports ints). Also maybe floats in future etc...
 - synthetic stress test (to test performance improvement after using bump allocation in certain places like the parser)
-- better way to handle hash table storage (tagged union instead of a generic pointer potentially)
 */
