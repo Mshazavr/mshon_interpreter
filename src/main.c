@@ -11,7 +11,7 @@
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        printf("Please provide a file path.\n");
+        printf("File path required\n");
         return 1;
     }
 
@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
     char *code = malloc(length + 1);
     if (code == NULL) {
-        printf("Failed to allocate memory for file content.\n");
+        printf("Failed to allocate memory for file content\n");
         fclose(file);
         return 1;
     }
