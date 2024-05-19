@@ -59,11 +59,12 @@ struct ASTNode_s {
 typedef struct ASTNode_s ASTNode;
 
 typedef struct {
-    Token *tokens; 
+    Token const *tokens; 
     int num_tokens;
     int token_pos;  
 } ParserContext;
 
+void delete_node(ASTNode *node);
 
 // Expression Parsers
 ASTNode parse_number_or_variable(ParserContext *context);
@@ -81,7 +82,7 @@ ASTNode parse_function(ParserContext *context);
 ASTNode parse_stmt_sequence(ParserContext *context);
 
 // Entry points
-ASTNode parse_ast(Token *tokens, int num_tokens);
+ASTNode parse_ast(Token const *tokens, int num_tokens);
 char ast_equal(ASTNode *left, ASTNode *right); 
 void print_node(ASTNode *node, size_t indent_count);
 

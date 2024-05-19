@@ -2,8 +2,8 @@ CC = gcc
 CFLAGS = -I./include -Wall -Wextra -g -Wno-missing-field-initializers
 VPATH = include
 
-OBJ = build/main.o build/tokenizer.o build/parser.o build/hash_table.o build/stack.o build/evaluator.o
-OBJ_T = build/test.o build/tokenizer.o build/parser.o build/hash_table.o build/stack.o build/evaluator.o
+OBJ = build/main.o build/tokenizer.o build/parser.o build/hash_table.o build/stack.o build/evaluator.o build/interpreter.o
+OBJ_T = build/test.o build/tokenizer.o build/parser.o build/hash_table.o build/stack.o build/evaluator.o build/interpreter.o
 
 mshon: $(OBJ)
 	$(CC) $(CFLAGS) -o bin/mshon $(OBJ)
@@ -11,11 +11,14 @@ mshon: $(OBJ)
 test: $(OBJ_T)
 	$(CC) $(CFLAGS) -o bin/test $(OBJ_T)
 
-build/main.o: src/main.c include/tokenizer.h include/parser.h include/evaluator.h
+build/main.o: src/main.c include/tokenizer.h include/parser.h include/evaluator.h include/interpreter.h
 	$(CC) $(CFLAGS) -c src/main.c -o build/main.o
 
-build/test.o: tests/runner.c include/tokenizer.h include/parser.h include/evaluator.h
+build/test.o: tests/runner.c include/tokenizer.h include/parser.h include/evaluator.h include/interpreter.h
 	$(CC) $(CFLAGS) -c tests/runner.c -o build/test.o
+
+build/interpreter.o: src/interpreter.c include/interpreter.h include/tokenizer.h include/parser.h include/evaluator.h 
+	$(CC) $(CFLAGS) -c src/interpreter.c -o build/interpreter.o
 
 build/parser.o: src/parser.c include/parser.h include/tokenizer.h
 	$(CC) $(CFLAGS) -c src/parser.c -o build/parser.o

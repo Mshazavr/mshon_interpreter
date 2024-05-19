@@ -4,6 +4,11 @@
 // Used for logging
 extern const char *TokeTypeNames[];
 
+enum TokenizerError {
+    TOKENIZER_PASS = 0,
+    TOKENIZER_INVALID_CHARACTER
+};
+
 enum TokenType {
     PLUS,
     MINUS,
@@ -39,12 +44,18 @@ typedef struct {
 
 typedef struct {
     Token *parsed_tokens;
-    int parsed_tokens_length;
-    int parsed_tokens_capacity;
-    char *code; 
+    size_t parsed_tokens_length;
+    size_t parsed_tokens_capacity;
+    char const *code;
+    char const *code_start;
+    char *error_message; 
+    enum TokenizerError error_code;
 } TokenizerState;
 
-TokenizerState init_tokenizer_state(char *code);
+void delete_token(Token *token);
+
+TokenizerState init_tokenizer_state(char const *code);
+
 char tokenize(TokenizerState *tokenizer_state);
 
 #endif

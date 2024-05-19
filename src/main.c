@@ -7,6 +7,7 @@
 #include "hash_table.h"
 #include "stack.h"
 #include "evaluator.h"
+#include "interpreter.h"
 
 void test_tokenizer() {
     char *code = (
@@ -56,7 +57,7 @@ void test_tokenizer() {
     };
     TokenizerState tokenizer_state = init_tokenizer_state(code);
     tokenize(&tokenizer_state);
-    for (int i = 0; i < tokenizer_state.parsed_tokens_length; ++i) {
+    for (size_t i = 0; i < tokenizer_state.parsed_tokens_length; ++i) {
         assert(tokenizer_state.parsed_tokens[i].token_type == expected_tokens[i].token_type);
         if (tokenizer_state.parsed_tokens[i].token_value == NULL) {
             assert(expected_tokens[i].token_value == NULL);
@@ -179,11 +180,20 @@ void test_evaluator() {
     //print_node(&root, 0);
 }
 
+void test_interpreter() {
+    char *code = "fn sum(a, b) { if (1+1) {return a+b;} else {return 0;} } let x = 12+43; let y = sum(40, 60); print -x*y+1;";
+    char *error_message;
+    char c = interpret(code, &error_message);
+    printf("Exit code: %d\n", c);
+}
+
 int main() {
-    test_tokenizer();
-    test_parser();
-    test_hash_table();
-    test_stack();
-    test_evaluator();
+    //test_tokenizer();
+    //test_parser();
+    //test_hash_table();
+    //test_stack();
+    //test_evaluator();
+
+    test_interpreter();
     return 0;
 }

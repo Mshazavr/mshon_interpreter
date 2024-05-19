@@ -1,47 +1,70 @@
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
+#include <stdlib.h>
 #include <stdint.h>
-#include "tokenizer.h"
-#include "parser.h"
-#include "hash_table.h"
-#include "stack.h"
-#include "evaluator.h"
+#include <dirent.h>
+#include <libgen.h>
 
-void test_evaluator() {
-    //char *code = "let Brazil = 42 + (gg - 1 - 12); Brazil = ((444));";
-    //char *code = "if x + 1 - 2 { let brazil = mentioned; } else { cuba = 21; }";
-    //char *code = "fn main(x, y) { let x = 12; print x + y; return y-x; }";
-    //char *code = "let x = fff(aa, 43-1+Brazil, (your_func(Mentioned)));";
-    char *code = "fn sum(a, b) { if (1+1) {return a+b;} else {return 0;} } let x = 12+43; let y = sum(40, 60); print -x*y+1;";
-    //char *code = "let x = -1; print x;";
-    //char *code = "fn sum(a, b) { return a+b; } let y = sum(4, 5); print y;";
-    //struct Node expected_node = {.node_type = ARITHMETIC,};
-    
-    // Tokenize 
-    TokenizerState tokenizer_state = init_tokenizer_state(code);
-    char error = tokenize(&tokenizer_state);
-    if (error) {
-        printf("Tokenization failed: encountered an invalid character\n");
-        return;
-    }
+#include "interpreter.h"
 
-    // Parse
-    ASTNode root = parse_ast(tokenizer_state.parsed_tokens, tokenizer_state.parsed_tokens_length);
-    if (root.node_type == INVALID) {
-        printf("Syntax error\n");
-        return;
-    }
+#define MAX_FILE_SIZE 1048576
 
-    // Evaluate 
-    EvaluatorContext context = evaluate(&root);
-    printf("Exit code: %d\n", context.error_code);
-    printf("Exit messge: %s\n", context.error_message);
-
-    //print_node(&root, 0);
+char *get_directory(const char *file_path) {
+    char *file_path_copy = strdup(file_path);
+    char *dir_path = dirname(file_path_copy);
+    char *dir_path_copy = strdup(dir_path);
+    free(file_path_copy);
+    return dir_path_copy;
 }
 
+void print_test_passed() {
+
+}
+
+
+void run_test(size_t test_index, char const *test_name, char const *code) {
+    char *error_message;
+    char exit_code = interpret(code, &error_message);
+    if (exit_code) {
+        printf("error message: %s\n", error_message);
+    }
+    printf("Exit code: %d\n", exit_code);
+}
+
+
 int main() {
-    test_evaluator();
+    char *source_dir = get_directory(__FILE__);
+    char test_cases_dir_path[300];
+    snprintf(test_cases_dir_path, sizeof(test_cases_dir_path), "%s/test_cases", source_dir);
+    free(source_dir);
+
+    DIR *test_cases_dir;
+    struct dirent *dir;
+    test_cases_dir = opendir(test_cases_dir_path);
+
+    size_t test_index = 0;
+    if (test_cases_dir) {
+        while((dir = readdir(test_cases_dir)) != NULL) {
+            if (strstr(dir->d_name, ".shr") != NULL) {
+                char filepath[600];
+                snprintf(filepath, sizeof(filepath), "%s/%s", test_cases_dir_path, dir->d_name);
+
+                FILE *file = fopen(filepath, "r");
+                if (file) {
+                    char *code = malloc(MAX_FILE_SIZE);
+                    if (code) {
+                        size_t bytes_read = fread(code, 1, MAX_FILE_SIZE - 1, file);
+                        code[bytes_read] = '\0';
+
+                        run_test(test_index, dir->d_name, code);               
+
+                        free(code);
+                    }
+                    fclose(file);
+                }
+            }
+        }
+        closedir(test_cases_dir);
+    }
     return 0;
 }

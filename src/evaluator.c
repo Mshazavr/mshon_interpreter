@@ -85,6 +85,7 @@ char allocate_stack_frame(
 void evaluate_number(ASTNode const *node, EvaluatorContext *context);
 void evaluate_variable(ASTNode const *node, EvaluatorContext *context);
 void evaluate_arithmetic(ASTNode const *node, EvaluatorContext *context);
+void evaluate_function_call(ASTNode const *node, EvaluatorContext *context);
 void evaluate_expression_node(ASTNode const *node, EvaluatorContext *context);
 
 void evaluate_declaration(ASTNode const *node, EvaluatorContext *context);
@@ -199,6 +200,9 @@ void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
     }
 
     evaluate_statement_sequence(function_node->children+0, context);
+    
+    stack_pop(&context->stack_frames);
+    
     if (node->prefix_operator != NULL && *node->prefix_operator == SUB_OP) {
         context->result.number *= -1;
     }

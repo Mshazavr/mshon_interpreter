@@ -1,7 +1,14 @@
-let xd = -12; 
-let y = 14; 
-fn func () {
-    if xd == y - 2 {
-        print xd + y;
+fn sum(a, b) { 
+    if 1+1 {
+        return a+b;
+    } 
+    else {
+        return 0;
     }
-}
+} 
+
+let x = 12+43; 
+
+let y = sum(40, 60); 
+
+print -x*y+1;

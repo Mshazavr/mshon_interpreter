@@ -1,0 +1,9 @@
+let xd = -12; 
+let y = 14; 
+fn func () {
+    if xd - y - 2 {
+        print xd + y;
+    }
+}
+
+let x = func();

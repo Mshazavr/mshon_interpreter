@@ -25,6 +25,22 @@ const char *ASTNodeTypeNames[] = {
 
 ASTNode INVALID_NODE = { .node_type = INVALID };
 
+void delete_node(ASTNode *node) {
+    free(node->prefix_operator);
+
+    free(node->value);
+
+    for(size_t i=0; i < node->args_length; ++i) free(node->args[i]);
+    free(node->args);
+
+    free(node->operators);
+    
+    for(size_t i=0; i < node->children_length; ++i) {
+        delete_node(node->children+i);
+    }
+}
+
+
 void print_indent(size_t indent_count) {
     for(size_t i = 0; i < indent_count; ++i) printf(" ");
 }
@@ -567,7 +583,7 @@ ASTNode parse_stmt_sequence(ParserContext *context) {
 }
 
 // Entry points
-ASTNode parse_ast(Token *tokens, int num_tokens) {
+ASTNode parse_ast(Token const *tokens, int num_tokens) {
     ParserContext context = {
         .tokens = tokens,
         .num_tokens = num_tokens,

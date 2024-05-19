@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "tokenizer.h"
@@ -30,13 +31,35 @@ const char *TokeTypeNames[] = {
     "IDENTIFIER",
 };
 
-TokenizerState init_tokenizer_state(char *code) {
+void delete_token(Token *token) {
+    free(token->token_value);
+}
+
+size_t num_digits(size_t x) {
+    if (x == 0) return 1;
+    size_t res = 0;
+    while(x > 0) {
+        x/=10;
+        ++res;
+    }
+    return res;
+}
+
+char *invalid_character_error_message(size_t pos, char c) {
+    char *error_message = malloc(33 + num_digits(pos));
+    if (error_message != NULL)
+        sprintf(error_message, "Invalid character at position %ld: %c", pos, c);
+    return error_message;
+}
+
+TokenizerState init_tokenizer_state(char const *code) {
     int parsed_tokens_capacity = 10;
     TokenizerState tokenizer_state = {
         .parsed_tokens = malloc(parsed_tokens_capacity * sizeof(Token)),
         .parsed_tokens_capacity = parsed_tokens_capacity,
         .parsed_tokens_length = 0,
-        .code = code
+        .code = code,
+        .code_start = code
     };
     return tokenizer_state;
 }
@@ -67,13 +90,13 @@ char is_alphanumeric(char c) {
     return is_alphabetical(c) || is_numeric(c);
 }
 
-char parse_next_token(TokenizerState *tokenizer_state) {
+void parse_next_token(TokenizerState *tokenizer_state) {
     while(is_whitespace(tokenizer_state->code[0])) {
         ++tokenizer_state->code;
         continue;
     }
     
-    if (tokenizer_state->code[0] == '\0') return 0; 
+    if (tokenizer_state->code[0] == '\0') return; 
 
     Token next_token = {.token_type = IDENTIFIER, .token_value = NULL};
 
@@ -104,13 +127,18 @@ char parse_next_token(TokenizerState *tokenizer_state) {
     // The next token has more than a single char in its value
     if (next_token.token_type == IDENTIFIER) {
         char has_alphabetical = 0;
-        char *code_start = tokenizer_state->code;
+        char const *code_start = tokenizer_state->code;
         while (is_alphanumeric(tokenizer_state->code[0])) {
             if (is_alphabetical(tokenizer_state->code[0])) has_alphabetical = 1;
             ++tokenizer_state->code;
         }
         if (tokenizer_state->code == code_start) {
-            return 1;
+            tokenizer_state->error_code = TOKENIZER_INVALID_CHARACTER;
+            tokenizer_state->error_message = invalid_character_error_message(
+                tokenizer_state->code - tokenizer_state->code_start, 
+                tokenizer_state->code[0]
+            );
+            return;
         }
         
         next_token.token_value = malloc(tokenizer_state->code - code_start + 1);
@@ -137,13 +165,15 @@ char parse_next_token(TokenizerState *tokenizer_state) {
 
     tokenizer_state_adjust_capacity(tokenizer_state);
     tokenizer_state->parsed_tokens[tokenizer_state->parsed_tokens_length++] = next_token;
-    return 0;
+    return;
 }
 
 char tokenize(TokenizerState *tokenizer_state) {
-    while (tokenizer_state->code[0] != '\0') {
-        char error = parse_next_token(tokenizer_state);
-        if (error) return error;
+    while(tokenizer_state->code[0] != '\0') {
+        parse_next_token(tokenizer_state);
+        if (tokenizer_state->error_code) {
+            return tokenizer_state->error_code;
+        }
     }
-    return 0;
+    return TOKENIZER_PASS;
 }
