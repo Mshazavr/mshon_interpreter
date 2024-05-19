@@ -156,6 +156,8 @@ void evaluate_arithmetic(ASTNode const *node, EvaluatorContext *context) {
 
 void evaluate_function_call(ASTNode const *node, EvaluatorContext *context) {
     ASTNode *function_node = (ASTNode *)search_identifier_value(context, node->value);
+    // TODO: fix the bug - hash table values should point to a tagged union of int34_t or ASTNode*
+    //       int pointer to ASTNode pointer is undefined behavior.
 
     if (function_node == NULL) {
         context->error_code = UNDECLARED_IDENTIFIER;
