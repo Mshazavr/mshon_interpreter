@@ -34,10 +34,61 @@ vomit -1 * (fib(6) + fib(7));
 
 Output: 
 
-```
+```bash
 8
 -34
 ``` 
+
+### Error handling
+Mshon also supports simple syntax and semantic error handling 
+
+#### Syntax error examples
+
+Input:
+```
+suppose 34 = 4;
+```
+
+Output:
+```bash
+error message: Syntex error: Expected IDENTIFIER. Instead got: NUMERIC_LITERAL[34]
+```
+
+Input:
+```
+suppose x = 4
+vomit x;
+```
+
+Output:
+```bash
+error message: Syntex error: Expected SEMICOLON. Instead got: PRINT
+```
+
+
+#### Semantic error examples
+
+Input:
+```
+suppose x = 4
+vomit x();
+```
+
+Output:
+```bash
+error message: Variable is not callable: x
+```
+
+Input:
+```
+suppose x = 4
+vomit x + y - 1;
+```
+
+Output:
+```bash
+error message: Undeclared Identifier: y
+```
 
 ## Installation 
 
