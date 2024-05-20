@@ -19,24 +19,32 @@ fn fib(i) {
     }
 }
 
-vomit fib(5);
+fn print_fib(left, right) {
+    imagine left - right {
+        vomit - fib(left) * (50 + 50);
+        suppose exit = print_fib(left+1, right);
+        checkit exit;
+    }
+    bummer {
+        vomit - fib(left) * (50 + 50);
+        checkit 0;
+    }
+}
 
-fn sum(a, b) { 
-    checkit a + b;
-} 
-
-suppose x = 6;
-suppose y = x;
-y = y + 1;
-
-vomit -1 * (fib(6) + fib(7));
+suppose exit = print_fib(3, 10);
 ```
 
 Output: 
 
 ```bash
-8
--34
+-300
+-500
+-800
+-1300
+-2100
+-3400
+-5500
+-8900
 ``` 
 
 ### Error handling
