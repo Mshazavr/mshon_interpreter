@@ -392,5 +392,5 @@ EvaluatorContext evaluate(ASTNode *node, char dry_run) {
 /*
 TODO 
 - string type support (currently only supports ints). Also maybe floats in future etc...
-- synthetic stress test (to test performance improvement after using bump allocation in certain places like the parser)
+- synthetic stress test
 */

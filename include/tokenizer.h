@@ -59,8 +59,3 @@ TokenizerState init_tokenizer_state(char const *code);
 char tokenize(TokenizerState *tokenizer_state);
 
 #endif
-
-/*
-TODOs 
-- tokenizer fails gracefully in case of unexpected char
-*/

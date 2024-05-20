@@ -121,8 +121,6 @@ void parse_next_token(TokenizerState *tokenizer_state) {
             next_token.token_type = EQUAL;
         }
     }
-    // TODO: adding string support
-    //else if (tokenizer_state->code[0] == '"') next_token.token_type = DOUBLE_QUOTES;
 
     // The next token has more than a single char in its value
     if (next_token.token_type == IDENTIFIER) {

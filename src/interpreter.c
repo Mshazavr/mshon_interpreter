@@ -23,7 +23,7 @@ char interpret(char const *code, char **error_message, EvaluatorContext *context
     // Parse
     ASTNode root = parse_ast(tokens, num_tokens);
     if (root.node_type == INVALID) {
-        *error_message = "Syntax error";
+        *error_message = strdup(root.error_message);
 
         // free mempory
         for (size_t i = 0; i < num_tokens; ++i) {

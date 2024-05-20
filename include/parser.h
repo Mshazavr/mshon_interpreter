@@ -36,12 +36,10 @@ enum OperatorType {
     DIV_OP
 };
 
-// TODO: reduce memory footprint by introducing tags 
-// and unions
 struct ASTNode_s { 
     enum ASTNodeType node_type;
 
-    // used when node_type is NUMBER, VARIABLE or FUNCTION
+    // used when node_type is NUMBER, VARIABLE, FUNCTION_CALL, FUNCTION
     char *value;
 
     // used for function arguments
@@ -55,6 +53,8 @@ struct ASTNode_s {
 
     struct ASTNode_s *children;
     size_t children_length;
+
+    const char *error_message;
 };
 typedef struct ASTNode_s ASTNode;
 

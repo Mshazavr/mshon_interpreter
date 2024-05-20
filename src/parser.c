@@ -23,7 +23,48 @@ const char *ASTNodeTypeNames[] = {
     "STMT_SEQUENCE",
 }; 
 
-ASTNode INVALID_NODE = { .node_type = INVALID };
+ASTNode get_invalid_node(const enum TokenType expected_type, const ParserContext *context) {
+    char *error_message;
+    if (context->token_pos < context->num_tokens) {
+        size_t num_bytes = (
+            38 + 1 +
+            strlen(TokeTypeNames[expected_type]) + 
+            strlen(TokeTypeNames[context->tokens[context->token_pos].token_type])
+        );
+
+        if (context->tokens[context->token_pos].token_value) {
+            num_bytes += strlen(context->tokens[context->token_pos].token_value) + 2;
+            error_message = malloc(num_bytes);
+            sprintf(
+                error_message, 
+                "Syntex error: Expected %s. Instead got: %s[%s]", 
+                TokeTypeNames[expected_type],
+                TokeTypeNames[context->tokens[context->token_pos].token_type],
+                context->tokens[context->token_pos].token_value
+            );
+        }
+        else {
+            error_message = malloc(num_bytes);
+            sprintf(
+                error_message, 
+                "Syntex error: Expected %s. Instead got: %s", 
+                TokeTypeNames[expected_type],
+                TokeTypeNames[context->tokens[context->token_pos].token_type]
+            );  
+        }   
+    }
+    else {
+        error_message = malloc(50 + strlen(TokeTypeNames[expected_type]) + 1);
+
+        sprintf(
+            error_message, 
+            "Syntex error: Expected %s. Instead ran out of tokens", 
+            TokeTypeNames[expected_type]
+        );
+    }
+    
+    return (ASTNode){.node_type=INVALID, .error_message=error_message};
+}
 
 void delete_node(ASTNode *node) {
     free(node->prefix_operator);
@@ -124,7 +165,7 @@ char step(ParserContext *context, enum TokenType token_type) {
 ASTNode parse_number_or_variable(ParserContext *context) {
     ASTNode node = { .node_type = 0 };
     if (!peek(context, NUMERIC_LITERAL) && !peek(context, IDENTIFIER)) {
-        return INVALID_NODE;
+        return get_invalid_node(IDENTIFIER, context);
     }
     if (peek(context, NUMERIC_LITERAL)) node.node_type = NUMBER;
     if (peek(context, IDENTIFIER)) node.node_type = VARIABLE;
@@ -139,14 +180,14 @@ ASTNode parse_function_call(ParserContext *context) {
     // IDENTIFIER ROUND_OPEN <comma separated expressions> ROUND_CLOSE
 
     // IDENTIFIER
-    if (!peek(context, IDENTIFIER)) return INVALID_NODE;
+    if (!peek(context, IDENTIFIER)) return get_invalid_node(IDENTIFIER, context);
     char *value = strdup(context->tokens[context->token_pos].token_value);
     context->token_pos += 1;
 
     // IDENTIFIER ROUND_OPEN
     if (!step(context, ROUND_OPEN)) {
         free(value);
-        return INVALID_NODE;
+        return get_invalid_node(ROUND_OPEN, context);
     }
 
     // IDENTIFIER ROUND_OPEN <comma separated expressions>
@@ -160,7 +201,7 @@ ASTNode parse_function_call(ParserContext *context) {
             for (size_t i = 0; i < children_length; ++i) cleanup_node(children+i);
             free(children);
             free(value);
-            return INVALID_NODE;
+            return next_node;
         }
 
         if (children_length == children_capacity) {
@@ -174,7 +215,7 @@ ASTNode parse_function_call(ParserContext *context) {
             for (size_t i = 0; i < children_length; ++i) cleanup_node(children+i);
             free(children);
             free(value);
-            return INVALID_NODE;
+            return get_invalid_node(ROUND_CLOSE, context);
         }
     }
 
@@ -183,7 +224,7 @@ ASTNode parse_function_call(ParserContext *context) {
         for (size_t i = 0; i < children_length; ++i) cleanup_node(children+i);
         free(children);
         free(value);
-        return INVALID_NODE;
+        return get_invalid_node(ROUND_CLOSE, context);
     }
 
     ASTNode node = {
@@ -197,9 +238,9 @@ ASTNode parse_function_call(ParserContext *context) {
 }
 
 ASTNode parse_bracket_expression(ParserContext *context) {
-    if (!step(context, ROUND_OPEN)) return INVALID_NODE;
+    if (!step(context, ROUND_OPEN)) return get_invalid_node(ROUND_OPEN, context);
     ASTNode child_node = parse_expression(context);
-    if (!step(context, ROUND_CLOSE)) return INVALID_NODE;
+    if (!step(context, ROUND_CLOSE)) return get_invalid_node(ROUND_CLOSE, context);
     return child_node;
 }
 
@@ -245,7 +286,7 @@ ASTNode parse_expression(ParserContext *context) {
             free(children_buffer);
             free(operators_buffer);
             if (prefix_operator != NULL) free(prefix_operator); 
-            return INVALID_NODE;
+            return next_node;
         }
         
         // Add the operand to the buffer
@@ -278,7 +319,7 @@ ASTNode parse_expression(ParserContext *context) {
         free(children_buffer);
         free(operators_buffer);
         if (prefix_operator != NULL) free(prefix_operator);
-        return INVALID_NODE;
+        return get_invalid_node(IDENTIFIER, context); // >:)
     }
     else if (children_length == 1) {
         ASTNode result = children_buffer[0];
@@ -304,23 +345,23 @@ ASTNode parse_declaration(ParserContext *context) {
     // LET IDENTIFER EQUAL <expression> SEMICOLON 
 
     // LET
-    if (!step(context, LET)) return INVALID_NODE;
+    if (!step(context, LET)) return get_invalid_node(LET, context);
     
     // LET IDENTIFIER
-    if (!peek(context, IDENTIFIER)) return INVALID_NODE;
+    if (!peek(context, IDENTIFIER)) return get_invalid_node(IDENTIFIER, context);
     ASTNode first_child = parse_number_or_variable(context);
-    if (first_child.node_type == INVALID) return INVALID_NODE;
+    if (first_child.node_type == INVALID) return first_child;
     
     // LET IDENTIFIER EQUAL
-    if (!step(context, EQUAL)) return INVALID_NODE;
+    if (!step(context, EQUAL)) return get_invalid_node(EQUAL, context);
 
     // LET IDENTIFIER EQUAL <expression>
     ASTNode second_child = parse_expression(context);
-    if (second_child.node_type == INVALID) return INVALID_NODE;
+    if (second_child.node_type == INVALID) return second_child;
 
     // LET IDENTIFIER EQUAL <expression> SEMICOLON
-    if (!step(context, SEMICOLON)) return INVALID_NODE;
-
+    if (!step(context, SEMICOLON)) return get_invalid_node(SEMICOLON, context);
+    
     ASTNode *children = malloc(2 * sizeof(ASTNode));
     children[0] = first_child;
     children[1] = second_child;
@@ -337,19 +378,19 @@ ASTNode parse_assignment(ParserContext *context) {
     // IDENTIFIER EQUAL <expression> SEMICOLON
     
     // IDENTIFIER
-    if (!peek(context, IDENTIFIER)) return INVALID_NODE;
+    if (!peek(context, IDENTIFIER)) return get_invalid_node(IDENTIFIER, context);
     ASTNode first_child = parse_number_or_variable(context);
-    if (first_child.node_type == INVALID) return INVALID_NODE; 
+    if (first_child.node_type == INVALID) return first_child; 
 
     // IDENTIFIER EQUAL
-    if (!step(context, EQUAL)) return INVALID_NODE;
+    if (!step(context, EQUAL)) return get_invalid_node(EQUAL, context);
 
     // IDENTIFIER EQUAL <expression>
     ASTNode second_child = parse_expression(context);
-    if (second_child.node_type == INVALID) return INVALID_NODE;
+    if (second_child.node_type == INVALID) return second_child;
 
     // IDENTIFIER EQUAL <expression> SEMICOLON
-    if (!step(context, SEMICOLON)) return INVALID_NODE;
+    if (!step(context, SEMICOLON)) return get_invalid_node(SEMICOLON, context);
 
     ASTNode *children = malloc(2 * sizeof(ASTNode));
     children[0] = first_child;
@@ -367,14 +408,14 @@ ASTNode parse_return_stmt(ParserContext *context) {
     // RETURN <expression> SEMICOLON
 
     // RETURN
-    if (!step(context, RETURN)) return INVALID_NODE;
+    if (!step(context, RETURN)) return get_invalid_node(RETURN, context);
 
     // RETURN <expression>
     ASTNode child = parse_expression(context);
-    if (child.node_type == INVALID) return INVALID_NODE;
+    if (child.node_type == INVALID) return child;
 
     // RETURN <expression> SEMICOlON
-    if (!step(context, SEMICOLON)) return INVALID_NODE;
+    if (!step(context, SEMICOLON)) return get_invalid_node(SEMICOLON, context);
 
     ASTNode *children = malloc(sizeof(ASTNode));
     children[0] = child;
@@ -391,14 +432,14 @@ ASTNode parse_print_stmt(ParserContext *context) {
     // PRINT <expression> SEMICOLON
 
     // PRINT
-    if (!step(context, PRINT)) return INVALID_NODE;
+    if (!step(context, PRINT)) return get_invalid_node(PRINT, context);
 
     // PRINT <expression>
     ASTNode child = parse_expression(context);
-    if (child.node_type == INVALID) return INVALID_NODE;
+    if (child.node_type == INVALID) return child;
 
     // PRINT <expression> SEMICOlON
-    if (!step(context, SEMICOLON)) return INVALID_NODE;
+    if (!step(context, SEMICOLON)) return get_invalid_node(SEMICOLON, context);
 
     ASTNode *children = malloc(sizeof(ASTNode));
     children[0] = child;
@@ -416,21 +457,21 @@ ASTNode parse_if_else_stmt(ParserContext *context) {
     // ELSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE <---- this line is optional 
 
     // IF
-    if (!step(context, IF)) return INVALID_NODE;
+    if (!step(context, IF)) return get_invalid_node(IF, context);
 
     // IF <expression>
     ASTNode first_child = parse_expression(context);
-    if (first_child.node_type == INVALID) return INVALID_NODE;
+    if (first_child.node_type == INVALID) return first_child;
 
     // IF <expression> CURLY_OPEN
-    if (!step(context, CURLY_OPEN)) return INVALID_NODE;
+    if (!step(context, CURLY_OPEN)) return get_invalid_node(CURLY_OPEN, context);
 
     // IF <expression> CURLY_OPEN <stmt_sequence>
     ASTNode second_child = parse_stmt_sequence(context);
-    if (second_child.node_type == INVALID) return INVALID_NODE;
+    if (second_child.node_type == INVALID) return second_child;
 
     // IF <expression> CURLY_OPEN <stmt_sequence> CURLY_CLOSE
-    if (!step(context, CURLY_CLOSE)) return INVALID_NODE;
+    if (!step(context, CURLY_CLOSE)) return get_invalid_node(CURLY_CLOSE, context);
 
     // Parse the ELSE block 
     if (peek(context, ELSE)) {
@@ -438,14 +479,14 @@ ASTNode parse_if_else_stmt(ParserContext *context) {
         context->token_pos += 1;
        
         // ELSE CURLY_OPEN
-        if (!step(context, CURLY_OPEN)) return INVALID_NODE;
+        if (!step(context, CURLY_OPEN)) return get_invalid_node(CURLY_OPEN, context);
 
         // ELSE CURLY_OPEN <stmt_sequence>
         ASTNode third_child = parse_stmt_sequence(context);
-        if (third_child.node_type == INVALID) return INVALID_NODE;
+        if (third_child.node_type == INVALID) return third_child;
         
         // ELSE CURLY_OPEN <stmt_sequence> CURLY_CLOSE
-        if (!step(context, CURLY_CLOSE)) return INVALID_NODE;
+        if (!step(context, CURLY_CLOSE)) return get_invalid_node(CURLY_CLOSE, context);
 
         ASTNode *children = malloc(3 * sizeof(ASTNode));
         children[0] = first_child;
@@ -483,9 +524,9 @@ ASTNode parse_function(ParserContext *context) {
     int function_name_token_pos = context->token_pos+1;
 
     // FN IDENTIFIER ROUND_OPEN
-    if (!step(context, FN) || !step(context, IDENTIFIER) || !step(context, ROUND_OPEN)) {
-        return INVALID_NODE;
-    }
+    if (!step(context, FN)) return get_invalid_node(FN, context);
+    if (!step(context, IDENTIFIER)) return get_invalid_node(IDENTIFIER, context);
+    if (!step(context, ROUND_OPEN)) return get_invalid_node(ROUND_OPEN, context);
 
     char **args = malloc(10 * sizeof(void*));
     int args_length = 0;
@@ -496,7 +537,7 @@ ASTNode parse_function(ParserContext *context) {
             
             if (next_node.node_type != VARIABLE) {
                 cleanup_double_array(args, args_length);
-                return INVALID_NODE;
+                return get_invalid_node(IDENTIFIER, context);
             }
             
             if (args_length == args_capacity) {
@@ -508,7 +549,7 @@ ASTNode parse_function(ParserContext *context) {
             if (!step(context, COMMA)) {
                 if (!step(context, ROUND_CLOSE)) {
                     cleanup_double_array(args, args_length);
-                    return INVALID_NODE;
+                    return get_invalid_node(ROUND_CLOSE, context);
                 }
                 break;
             }
@@ -516,19 +557,19 @@ ASTNode parse_function(ParserContext *context) {
     }
 
     // CURLY_OPEN
-    if (!step(context, CURLY_OPEN)) return INVALID_NODE;
+    if (!step(context, CURLY_OPEN)) return get_invalid_node(CURLY_OPEN, context);
 
     // CURLY_OPEN <stmt_sequence>
     ASTNode child_node = parse_stmt_sequence(context);
     if (child_node.node_type == INVALID) {
         cleanup_double_array(args, args_length);
-        return INVALID_NODE;
+        return child_node;
     }
 
     // CURLY_OPEN <stmt_sequence> CURLY_CLOSE
     if(!step(context, CURLY_CLOSE)) {
         cleanup_double_array(args, args_length);
-        return INVALID_NODE;
+        return get_invalid_node(CURLY_CLOSE, context);
     }
 
     ASTNode *children = malloc(sizeof(ASTNode));
@@ -564,7 +605,7 @@ ASTNode parse_stmt_sequence(ParserContext *context) {
         else if (peek(context, FN)) next_node = parse_function(context);
         else break; 
         
-        if (next_node.node_type == INVALID) return INVALID_NODE;
+        if (next_node.node_type == INVALID) return next_node;
 
         if (children_length == children_capacity) {
             children_capacity *= 2;
@@ -592,8 +633,11 @@ ASTNode parse_ast(Token const *tokens, int num_tokens) {
     ASTNode result = parse_stmt_sequence(&context);
     
     if (context.token_pos != num_tokens) {
-        cleanup_node(&result);
-        result = INVALID_NODE;
+        if (result.node_type == INVALID) return result;
+        else {
+            cleanup_node(&result);
+            result = get_invalid_node(IDENTIFIER, &context); // >>:)
+        }
     }
     
     return result;
@@ -622,12 +666,3 @@ char ast_equal(ASTNode *left, ASTNode *right) {
     
     return 1;
 }
-
-
-/*
-TODOs 
-- descriptive syntax errors attached to invalid nodes
-- check if allocations were NULL
-- use typedef instead of struct
-- use an array buffer for storing the nodes instead of mallocing on the go - compare performance
-*/ 
